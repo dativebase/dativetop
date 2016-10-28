@@ -1,0 +1,4 @@
+build/
+__pycache__
+src/Dative/private_resources/
+!src/Dative/icons/

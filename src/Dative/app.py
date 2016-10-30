@@ -48,7 +48,10 @@ class DativeWebView(toga.App):
         # Dative menu.
         dative_menu_item = toga.MenuItem(self.name)
         dative_menu = toga.Menu(self.name)
-        about_menu_item = toga.MenuItem('About ' + self.name)
+        about_menu_item = toga.MenuItem(
+            'About ' + self.name,
+            on_press=lambda x: self.main_window.info_dialog(
+                'Dative', 'Version 0.1.0'))
         quit_menu_item = toga.MenuItem(
             'Quit ' + self.name,
             on_press=lambda x: self.main_window.on_close(),

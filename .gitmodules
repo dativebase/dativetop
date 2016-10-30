@@ -1,0 +1,3 @@
+[submodule "src/external/dative-js"]
+	path = src/external/dative-js
+	url = https://github.com/jrwdunham/dative.git

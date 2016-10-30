@@ -3,21 +3,15 @@
 
     Use toga to create a native Mac OS application that runs Dative and the
     OLD. It does the following:
-    1. Downloads the OLD and its dependencies.
+    1. Includes the OLD and its dependencies.
     2. Allows the user to configure multiple OLDs and serve them locally using
        a Python server.
-    3. Downloads Dative and its dependencies and serves it.
+    3. Includes Dative and its dependencies and serves it.
     4. Creates a WebView instance in which to display Dative.
     5. Uses the toga interface machinery to create a native Senex, i.e., an
        administration system for creating and configuring OLDs and the Dative
        interface.
-    6. Bundles it up using pybee Briefcase ...
-
-TODOs:
-
-    1. Changes to main menu:
-       - list "Dative" instead of "python" in main menu
-       - list 
+    6. Bundle it up using pybee Briefcase ...
 
 """
 
@@ -32,7 +26,7 @@ DATIVE_URL = 'http://localhost:9000/'
 class DativeWebView(toga.App):
 
     def startup(self):
-        #TODO: how to get the screen in a cross-platform way?
+        # TODO: how to get the screen in a cross-platform way?
         self.screen = toga.platform.NSScreen.mainScreen().visibleFrame
         width = self.screen.size.width * 0.8
         self.main_window = toga.MainWindow(

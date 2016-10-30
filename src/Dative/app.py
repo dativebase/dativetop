@@ -23,7 +23,6 @@ TODOs:
 
 import toga
 from colosseum import CSS
-from rubicon.objc import get_selector, objc_method
 
 
 DATIVE_WEBSITE_URL = 'http://www.dative.ca/'
@@ -45,137 +44,36 @@ class DativeWebView(toga.App):
         self.main_window.show()
 
     def create_menu(self):
-        """Create the main menu.
-        WARNING: only works for Mac OS X currently because toga has no
-        cross-platform menu widgets yet.
-        """
-
-        print(toga.platform.NSBundle)
-
-        """
-        - menu (NSMenu: title, ...)
-          - methods:
-            - init
-            - add(MenuItem, MenuItemSeparator)
-            - (setSubmenu_forItem_ (could be `add` method on MenuItem...))
-          - attrs:
-            - title (label)
-
-        - menu item (NSMenuItem)
-          - methods:
-            - init
-            - add(Menu)
-          - attrs:
-            - title (label)
-            - on_press (action)
-            - key_equivalent
-
-        - menu item separator (MSMenuItem.separatorItem())
-
-        """
-
-        # App menu
-        app_name = self.name
-        self.menu = toga.platform.NSMenu.alloc().initWithTitle_('MainMenu')
-
-        self.app_menuItem = self.menu\
-            .addItemWithTitle_action_keyEquivalent_(
-                'Apple',
-                None,
-                '')
-        submenu = toga.platform.NSMenu.alloc().initWithTitle_(app_name)
-        menu_item = toga.platform.NSMenuItem.alloc()\
-            .initWithTitle_action_keyEquivalent_(
-                'About ' + app_name, None, '')
-        submenu.addItem_(menu_item)
-        submenu.addItem_(toga.platform.NSMenuItem.separatorItem())
-        menu_item = toga.platform.NSMenuItem.alloc()\
-            .initWithTitle_action_keyEquivalent_(
-                'Quit ' + app_name,
-                get_selector('terminate:'),
-                "q")
-        submenu.addItem_(menu_item)
-        self.menu.setSubmenu_forItem_(submenu, self.app_menuItem)
-
-        # Help menu
-        self.help_menuItem = self.menu\
-            .addItemWithTitle_action_keyEquivalent_(
-                'Apple',  # This title attr seems to have no effect
-                None,
-                '')
-        submenu = toga.platform.NSMenu.alloc().initWithTitle_('Fizz')
-        #submenu = toga.platform.NSMenu.alloc().init()
-        menu_item = MenuItem('Visit Dative web site', visit_dative_website)._impl
-        submenu.addItem_(menu_item)
-        self.menu.setSubmenu_forItem_(submenu, self.help_menuItem)
-
-        # Set the menu for the app.
-        self._impl.setMainMenu_(self.menu)
+        """Create the main menu."""
+        # Dative menu.
+        dative_menu_item = toga.MenuItem(self.name)
+        dative_menu = toga.Menu(self.name)
+        about_menu_item = toga.MenuItem('About ' + self.name)
+        quit_menu_item = toga.MenuItem(
+            'Quit ' + self.name,
+            on_press=lambda x: self.main_window.on_close(),
+            key_equivalent='q')
+        dative_menu_item.add(dative_menu)
+        dative_menu.add(about_menu_item)
+        dative_menu.add_separator()
+        dative_menu.add(quit_menu_item)
+        # Help menu.
+        help_menu_item = toga.MenuItem('Help')
+        help_menu = toga.Menu('Help')
+        website_menu_item = toga.MenuItem(
+            'Visit Dative web site', on_press=visit_dative_website)
+        help_menu.add(website_menu_item)
+        help_menu_item.add(help_menu)
+        # Main menu.
+        main_menu = toga.Menu('MainMenu')
+        main_menu.add(dative_menu_item)
+        main_menu.add(help_menu_item)
+        self.set_main_menu(main_menu)
 
 
 def visit_dative_website(menu_item):
     import webbrowser
     webbrowser.open(DATIVE_WEBSITE_URL)
-
-
-class TogaMenuItem(toga.platform.NSMenuItem):
-
-    @objc_method
-    def onPress_(self, obj) -> None:
-        print('onPress_ called')
-        if self._interface.on_press:
-            toga.platform.utils.process_callback(
-                self._interface.on_press(self._interface))
-
-
-class MenuItem:
-    """Based on ``Button`` in toga_cocoa/widgets/button.
-    """
-
-    def __init__(self, label, on_press=None):
-        self._config = {'label': label, 'on_press': on_press}
-        self._create()
-
-    def _create(self):
-        self.create()
-        self._configure(**self._config)
-
-    def create(self):
-        self._impl = TogaMenuItem.alloc().init()
-        self._impl._interface = self
-        self._impl.setTarget_(self._impl)
-        self._impl.setAction_(get_selector('onPress:'))
-
-    def _configure(self, label, on_press):
-        self.label = label
-        self.on_press = on_press
-
-    @property
-    def label(self):
-        return self._label
-
-    @label.setter
-    def label(self, value):
-        if value is None:
-            self._label = ''
-        else:
-            self._label = str(value)
-        self._set_label(value)
-
-    def _set_label(self, label):
-        self._impl.setTitle_(self.label)
-
-    @property
-    def on_press(self):
-        return self._on_press
-
-    @on_press.setter
-    def on_press(self, handler):
-        self._on_press = handler
-        self._set_on_press(handler)
-
-    def _set_on_press(self, value):
-        pass
 
 
 def inspect(t):
@@ -185,6 +83,6 @@ def inspect(t):
 
 
 if __name__ == '__main__':
-    icon = toga.Icon('./resources/OLDIcon.icns')
+    icon = toga.Icon('src/Dative/icons/OLDIcon.icns')
     app = DativeWebView('Dative', 'ca.dative.dative', icon=icon)
     app.main_loop()

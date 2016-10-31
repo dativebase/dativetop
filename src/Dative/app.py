@@ -7,6 +7,7 @@
     2. Allows the user to configure multiple OLDs and serve them locally using
        a Python server.
     3. Includes Dative and its dependencies and serves it.
+       - font-awesome is not included in Dative, but we want a local copy ...
     4. Creates a WebView instance in which to display Dative.
     5. Uses the toga interface machinery to create a native Senex, i.e., an
        administration system for creating and configuring OLDs and the Dative
@@ -15,20 +16,27 @@
 
 """
 
-import toga
 from colosseum import CSS
+from concurrent.futures import ProcessPoolExecutor as Executor
+import http.server
+import os
+import socketserver
+import threading
+import toga
 
 
 DATIVE_WEBSITE_URL = 'http://www.dative.ca/'
-DATIVE_URL = 'http://localhost:9000/'
+DATIVE_IP = 'localhost'
+DATIVE_PORT = 9000
+DATIVE_URL = 'http://{}:{}/'.format(DATIVE_IP, DATIVE_PORT)
 
 
-class DativeWebView(toga.App):
+class DativeToga(toga.App):
 
     def startup(self):
         # TODO: how to get the screen in a cross-platform way?
         self.screen = toga.platform.NSScreen.mainScreen().visibleFrame
-        width = self.screen.size.width * 0.8
+        width = self.screen.size.width * 0.9
         self.main_window = toga.MainWindow(
             self.name, size=(width, self.screen.size.height))
         self.main_window.app = self
@@ -79,7 +87,39 @@ def inspect(t):
         print('{}: {}\n'.format(attr, val))
 
 
-if __name__ == '__main__':
+def launch_dative_toga():
+    """Launch the Dative Toga application, which right now is just a webview
+    for displaying the Dative JavaScript application.
+    """
     icon = toga.Icon('src/Dative/icons/OLDIcon.icns')
-    app = DativeWebView('Dative', 'ca.dative.dative', icon=icon)
+    app = DativeToga('Dative', 'ca.dative.dative', icon=icon)
     app.main_loop()
+
+
+def serve_dative_js():
+    """Serve the Dative JavaScript application in a new process. Necessary so
+    that ``os.chdir`` will not mess up the current working directory of the
+    main thread.
+    """
+    with Executor(max_workers=1) as exe:
+        job = exe.submit(_serve_dative_js)
+
+
+def _serve_dative_js():
+    """Serve the Dative JavaScript application a separate thread."""
+    src_path = os.path.dirname(os.path.dirname(__file__))
+    dative_js_root = os.path.join(src_path, 'external', 'dative-js', 'dist')
+    os.chdir(dative_js_root)
+    Handler = http.server.SimpleHTTPRequestHandler
+    httpd = socketserver.TCPServer((DATIVE_IP, DATIVE_PORT), Handler)
+    print("serving at port", PORT)
+    httpd.serve_forever()
+
+
+if __name__ == '__main__':
+    # Serve the Dative JavaScript application a separate thread.
+    thread = threading.Thread(
+        target=serve_dative_js, kwargs={}, daemon=True)
+    thread.start()
+    # Launch Dative Toga (native OS application)
+    launch_dative_toga()

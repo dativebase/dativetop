@@ -22,14 +22,30 @@ import http.server
 import os
 import socketserver
 import threading
+from wsgiref.simple_server import make_server
+from paste.deploy import appconfig
 import toga
 
+from old import main as oldmain
 
 DATIVE_WEBSITE_URL = 'http://www.dative.ca/'
-DATIVE_IP = 'localhost'
-DATIVE_PORT = 9000
+#DATIVE_IP = 'localhost'
+DATIVE_IP = '127.0.0.1'
+DATIVE_PORT = 9001
 DATIVE_URL = 'http://{}:{}/'.format(DATIVE_IP, DATIVE_PORT)
 
+#OLD_IP = 'localhost'
+OLD_IP = '127.0.0.1'
+OLD_PORT = 5678
+
+OLD_CFG_PTH = 'src/external/old-pyramid/development.ini'
+print(os.listdir('.'))
+OLD_SETTINGS = appconfig(
+    'config:{}'.format(OLD_CFG_PTH), relative_to='.')
+OLD_CONFIG = {
+    '__file__': OLD_SETTINGS['__file__'],
+    'here': OLD_SETTINGS['here']
+}
 
 class DativeToga(toga.App):
 
@@ -106,20 +122,28 @@ def serve_dative_js():
 
 
 def _serve_dative_js():
-    """Serve the Dative JavaScript application a separate thread."""
+    """Serve the Dative JavaScript application in a separate thread."""
     src_path = os.path.dirname(os.path.dirname(__file__))
     dative_js_root = os.path.join(src_path, 'external', 'dative-js', 'dist')
     os.chdir(dative_js_root)
     Handler = http.server.SimpleHTTPRequestHandler
     httpd = socketserver.TCPServer((DATIVE_IP, DATIVE_PORT), Handler)
-    print("serving at port", PORT)
     httpd.serve_forever()
 
 
+def serve_old():
+    app = oldmain(OLD_CONFIG, **OLD_SETTINGS)
+    server = make_server(OLD_IP, OLD_PORT, app)
+    server.serve_forever()
+
+
 if __name__ == '__main__':
+    thread1 = threading.Thread(
+        target=serve_old, kwargs={}, daemon=True)
+    thread1.start()
     # Serve the Dative JavaScript application a separate thread.
-    thread = threading.Thread(
+    thread2 = threading.Thread(
         target=serve_dative_js, kwargs={}, daemon=True)
-    thread.start()
+    thread2.start()
     # Launch Dative Toga (native OS application)
     launch_dative_toga()

@@ -1,3 +1,6 @@
 [submodule "src/external/dative-js"]
 	path = src/external/dative-js
 	url = https://github.com/jrwdunham/dative.git
+[submodule "src/external/old-pyramid"]
+	path = src/external/old-pyramid
+	url = https://github.com/jrwdunham/old-pyramid.git

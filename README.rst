@@ -1,12 +1,11 @@
 ================================================================================
-Dative Toga
+DativeTop: `DativeBase`_ as a desktop application
 ================================================================================
 
-This is a Toga project for Dative and the OLD.
-
-It is under development, but the goal is to package the Dative Backbone.js GUI
-app and the OLD Pylons REST API into an offline application controlled via a
-simple Toga wrapping and bundled using Briefcase.
+`DativeBase`_ (`Dative`_ + the `Online Linguistic Database (OLD)`_) is
+server-side software for linguistic fieldwork. DativeTop is the DativeBase as a
+desktop application. It is the Dative and the OLD wrapped in a `Toga`_ and
+packaged into a `Briefcase`_.
 
 
 Current Issues
@@ -24,10 +23,14 @@ Current Issues
 For Developers
 ================================================================================
 
-To launch Dative-Toga, make sure you have `Toga`_ installed and run::
+To launch DativeTop make sure you have `Toga`_ installed and run::
 
-    $ cd dative-toga
+    $ cd dativetop
     $ python -m src.Dative.app
 
-.. _`Toga`: https://github.com/pybee/toga
 
+.. _`DativeBase`: https://github.com/dativebase/dativebase
+.. _`Dative`: https://github.com/dativebase/dative
+.. _`Online Linguistic Database (OLD)`: https://github.com/dativebase/old-pyramid
+.. _`Toga`: https://github.com/pybee/toga
+.. _`Briefcase`: https://github.com/pybee/briefcase

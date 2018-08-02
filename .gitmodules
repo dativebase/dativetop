@@ -1,0 +1,6 @@
+[submodule "src/dative"]
+	path = src/dative
+	url = https://github.com/dativebase/dative.git
+[submodule "src/old"]
+	path = src/old
+	url = https://github.com/dativebase/old-pyramid.git

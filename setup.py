@@ -1,8 +1,45 @@
 #!/usr/bin/env python
 import io
+import os
 import re
 from setuptools import setup, find_packages
+import shlex
+import shutil
+import subprocess
 import sys
+
+from briefcase.app import app
+
+
+def install_extras(self):
+    """Override for Briefcase's ``install_extras`` method. It:
+
+    - copies the OLD config file to the correct place,
+    - copies the compiled Dative dist/ directory to the correct place, and
+    - installs the OLD and its dependencies
+    """
+    old_cfg_src_pth = os.path.join('src', 'old', 'config.ini')
+    old_cfg_dst_pth = os.path.join(self.app_dir, 'src', 'old', 'config.ini')
+    shutil.copyfile(old_cfg_src_pth, old_cfg_dst_pth)
+    dative_src_pth = os.path.join('src', 'dative', 'dist')
+    dative_dst_pth = os.path.join(self.app_dir, 'src', 'dative', 'dist')
+    if os.path.exists(dative_dst_pth):
+        shutil.rmtree(dative_dst_pth)
+    shutil.copytree(dative_src_pth, dative_dst_pth)
+    cmd = shlex.split(
+        'pip install'
+        ' --upgrade'
+        ' --force-reinstall'
+        ' --target={}'
+        ' src/old/[testing]'.format(self.app_dir))
+    print(subprocess.check_output(
+        cmd,
+        stderr=subprocess.STDOUT,
+    ).decode('utf-8'))
+
+
+app.install_extras = install_extras
+
 
 with io.open('./dativetop/__init__.py', encoding='utf8') as version_file:
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file.read(), re.M)
@@ -14,42 +51,6 @@ with io.open('./dativetop/__init__.py', encoding='utf8') as version_file:
 
 with io.open('README.rst', encoding='utf8') as readme:
     long_description = readme.read()
-
-
-def install_deps():
-    """Reads requirements.txt and preprocess it
-    to be feed into setuptools.
-
-    This is the only possible way (we found)
-    how requirements.txt can be reused in setup.py
-    using dependencies from private github repositories.
-
-    Links must be appendend by `-{StringWithAtLeastOneNumber}`
-    or something like that, so e.g. `-9231` works as well as
-    `1.1.0`. This is ignored by the setuptools, but has to be there.
-
-    Warnings:
-        to make pip respect the links, you have to use
-        `--process-dependency-links` switch. So e.g.:
-        `pip install --process-dependency-links {git-url}`
-
-    Returns:
-         list of packages and dependency links.
-    """
-    default = open('requirements/base.txt', 'r').readlines()
-    new_pkgs = []
-    links = []
-    for resource in default:
-        if 'git+ssh' in resource:
-            pkg = resource.split('#')[-1]
-            links.append(resource.strip() + '-9876543210')
-            new_pkgs.append(pkg.replace('egg=', '').rstrip())
-        else:
-            new_pkgs.append(resource.strip())
-    return new_pkgs, links
-
-new_pkgs, links = install_deps()
-
 
 
 setup(
@@ -68,6 +69,7 @@ setup(
             'django'
         ]
     ),
+    python_requires='>=3.5',
     classifiers=[
         'Development Status :: 1 - Planning',
         'License :: OSI Approved :: Apache Software License',
@@ -79,7 +81,8 @@ setup(
     options={
         'app': {
             'formal_name': 'DativeTop',
-            'bundle': 'org.dativebase'
+            'bundle': 'org.dativebase',
+            'icon': 'dativetop/icons/OLDIcon'
         },
 
         # Desktop/laptop deployments

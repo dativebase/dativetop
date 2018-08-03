@@ -33,6 +33,9 @@ OLD_SETTINGS = appconfig(
 OLD_CONFIG = {'__file__': OLD_SETTINGS['__file__'],
               'here': OLD_SETTINGS['here']}
 
+os.environ['OLD_DB_RDBMS'] = 'sqlite'
+os.environ['OLD_SESSION_TYPE'] = 'file'
+
 
 def launch_dativetop():
     """Launch the Dative Toga application, which right now is just a webview
@@ -56,6 +59,7 @@ class DativeTop(toga.App):
         self.webview = toga.WebView(style=Pack(flex=1))
         self.main_window.content = self.webview
         self.webview.url = DATIVE_URL
+        self.webview.refresh()
         self.main_window.show()
 
 
@@ -102,4 +106,3 @@ def main():
     serve_dative()
     serve_old()
     launch_dativetop()
-

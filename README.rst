@@ -8,18 +8,20 @@ desktop application. It is the Dative and the OLD wrapped in a `Toga`_ and
 packaged into a `Briefcase`_.
 
 
-Usage
+Current Issues
 ================================================================================
 
-The purpose of DativeTop is to make it easy for a non-technical end user to
-install and launch DativeBase on their desktop machine. Therefore, you should
-not need to know about the command line in order to use DativeTop. You should
-be able to just download a .app file or .exe file and double-click it. We are
-still working on getting to this stage. Please check back here later.
+- File upload doesn't work: no file browse menu opens up (Toga->Cocoa issue?)
+- Keyboard copy/paste doesn't work
 
-If you are feeling adventurous and would like to try to build DativeTop on Mac
-OS X, then proceed to the instructions below. (Support for other platforms will
-be forthcoming.)
+  - Apparently, "On OS X you have to explicitly add menu items for Copy/Paste
+    to make them work". See https://github.com/electron/electron/issues/2308.
+
+- Form browse breaking: can add forms but if you navigate away you can't get
+  back.
+- You currently have to build the OLD database yourself::
+
+    ``initialize_olddb development.ini``
 
 
 Build and install
@@ -90,69 +92,15 @@ launch DativeTop::
     $ make launch
 
 DativeTop should open a window (WebView) wherein Dative is running. You should
-now be able to login to the OLD named ``myold`` from the Dative interface using
-the default administrator user that the OLD creates by default:
-
-- username: admin
-- password: adminA_1
-
-Note that Dative and your OLD instance will now be being served locally on the
-following two URLs. You should be able to interact with these from a regular
-browser as well as via DativeTop:
-
-- Dative: http://127.0.0.1:5678/
-- OLD instance: http://127.0.0.1:5679/myold/
+now be able to login to the OLD named ``myold`` from the Dative interface.
 
 
 Troubleshooting
---------------------------------------------------------------------------------
-
-Blank screen
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-If DativeTop opens with a blank white screen, the previous process may not have
-shut down properly. If applicable, search for that process and kill it::
-
     $ ps aux | grep dativetop
-    someuser       34807   0.0  0.1  4356224   9640 s014  S     2:12pm   0:00.04 python -m dativetop
-    $ kill 34807
-
-
-OLD instances not visible in Dative
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-DativeTop may not display the OLD that you created (with
-``make create-old-instance OLD_NAME=myold`` above) in its login interface. This
-is because Dative's known OLDs are stored in the WebView's LocalStorage and
-DativeTop does not know how to clear that cache. The solution is to create a
-"server" within DativeTop's Dative interface that corresponds to the OLD
-instance that you created:
-
-1. Click on "Application Settings" under the "Dative" menu.
-2. Click on the "Servers" button.
-3. Open the "create a new server" interface by clicking on the "+" button.
-4. In the "Name" field, enter the name of your OLD instance, e.g., "myold".
-5. In the "URL" field, enter ``http://127.0.0.1:5679/<old_instance_name>``, e.g.,
-   ``http://127.0.0.1:5679/myold`` if you named your OLD instance ``myold``
-   when you ran ``make create-old-instance`` above.
-
-After doing the above, you should be able to login to your OLD instance from
-DativeTop.
-
-
-Known Issues
-================================================================================
-
-- File upload does not work. If you click on "Resources", then "Files" and then
-  the "+" button to create a new file entity, and then click the "Choose file"
-  button, nothing will happen.
-
-- Keyboard copy/paste does not work. Apparently, "On OS X you have to
-  explicitly add menu items for Copy/Paste to make them work"; see
-  https://github.com/electron/electron/issues/2308.
-
-- Building DativeTop on Mac OS X results in a .app bundle that does not have
-  the OLD icon.
+joeldunham       34820   0.0  0.0  4267768    900 s014  S+    2:15pm   0:00.00 grep dativetop
+joeldunham       34807   0.0  0.1  4356224   9640 s014  S     2:12pm   0:00.04 python -m dativetop
+joeldunham       34798   0.0  0.2  4355680  32076 s001  S+    2:11pm   0:00.93 vim dativetop/app.py
 
 
 .. _`DativeBase`: https://github.com/dativebase/dativebase

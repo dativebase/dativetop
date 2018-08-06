@@ -3,25 +3,23 @@ DativeTop: `DativeBase`_ as a desktop application
 ================================================================================
 
 `DativeBase`_ (`Dative`_ + the `Online Linguistic Database (OLD)`_) is
-server-side software for linguistic fieldwork. DativeTop is the DativeBase as a
-desktop application. It is the Dative and the OLD wrapped in a `Toga`_ and
+*web-based* software for linguistic fieldwork. DativeTop is the DativeBase as a
+*desktop* application. It is the Dative and the OLD wrapped in a `Toga`_ and
 packaged into a `Briefcase`_.
 
 
-Current Issues
+Install
 ================================================================================
 
-- File upload doesn't work: no file browse menu opens up (Toga->Cocoa issue?)
-- Keyboard copy/paste doesn't work
+End users *should* be able to install DativeTop in a way that is familiar on
+their platform. For example, Mac OS users should be able to download a
+DativeTop.dmg package, double-click it, drag the DativeTop.app folder to their
+Applications folder, and double-click on DativeTop.app to start a running
+DativeTop that just works.
 
-  - Apparently, "On OS X you have to explicitly add menu items for Copy/Paste
-    to make them work". See https://github.com/electron/electron/issues/2308.
-
-- Form browse breaking: can add forms but if you navigate away you can't get
-  back.
-- You currently have to build the OLD database yourself::
-
-    ``initialize_olddb development.ini``
+But DativeTop is not there yet. In the meantime, if you are feeling
+adventurous, you can try to build and run DativeTop on your Mac using the
+`Build and install`_ instructions below.
 
 
 Build and install
@@ -40,15 +38,14 @@ create and activate a Python 3.6 (or 3.5) virtual environment::
 Build for Mac OS X
 --------------------------------------------------------------------------------
 
-From the command line (terminal), change to the directory containing this file
-and run the following command::
+Move into the directory containing this file and run the following command::
 
     (env) $ make build-mac-os
 
 If the above succeeds, you should have a directory named DativeTop.app under
 macOS/. Double-clicking this should open up DativeTop which will display
-Dative. You should be able to login to the "evermore" OLD with username "admin"
-and password "admin_A1".
+Dative. You should be able to login to the *myold* OLD instance with username
+*admin* and password *adminA_1*.
 
 
 Troubleshooting
@@ -68,7 +65,7 @@ For Developers
 First, create (if necessary) and activate a Python 3.6/5 virtual environment as
 explained above.
 
-Then install the DativeTop's requirements as well as those of the OLD submodule
+Then install DativeTop's requirements as well as those of the OLD submodule
 and the OLD itself in development mode::
 
     (venv) $ pip install -r requirements/base.txt -e src/old/
@@ -76,13 +73,7 @@ and the OLD itself in development mode::
 Use the Makefile to see the convenience commands that are available::
 
     $ make help
-    build-dative                   Build Dative: install NPM dependencies, compile/minify JS and reset its servers array
-    build-mac-os                   Build a DativeTop .app bundle for Mac OS
-    create-old-instance            Create an OLD instance named OLD_NAME: create a directory structure for it, an SQLite database with tables pre-populated, and register it with Dative
-    destroy-old-instance           Destroy OLD instance OLD_NAME's files on disk and its SQLite database and de-register it from Dative
-    help                           Print this help message.
-    launch                         Launch DativeTop in development mode
-    run-mac-os                     Build and run DativeTop .app bundle for Mac OS
+    ...
 
 In general, you will want to build Dative, create an OLD instance, and then
 launch DativeTop::
@@ -91,16 +82,42 @@ launch DativeTop::
     $ make create-old-instance OLD_NAME=myold
     $ make launch
 
+Note: the ``create-old-instance`` command will create a SQLite database file in
+oldinstances/dbs/ as well as a directory for your OLD instance's files in
+oldinstances/. The "undo" command, which destroys an OLD instance's database
+and directory structure is ``destroy-old-instance``.
+
 DativeTop should open a window (WebView) wherein Dative is running. You should
-now be able to login to the OLD named ``myold`` from the Dative interface.
+now be able to login to the OLD named ``myold`` from the Dative interface using
+username *admin* and password *adminA_1*. Note that Dative and the OLD will be
+being served locally so you can view them in a regular browser at the following
+URLs:
+
+- Dative: http://127.0.0.1:5678/
+- The *myold* OLD instance: http://127.0.0.1:5679/myold/
 
 
 Troubleshooting
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+If you launch DativeTop and see a blank screen, it may be that a previous
+DativeTop was not shut down correctly. Search for the offending process and
+kill it::
+
     $ ps aux | grep dativetop
-joeldunham       34820   0.0  0.0  4267768    900 s014  S+    2:15pm   0:00.00 grep dativetop
-joeldunham       34807   0.0  0.1  4356224   9640 s014  S     2:12pm   0:00.04 python -m dativetop
-joeldunham       34798   0.0  0.2  4355680  32076 s001  S+    2:11pm   0:00.93 vim dativetop/app.py
+    $ someuser       45469   0.0  0.1  4357248  10392 s014  S    10:58am   0:00.12 python -m dativetop
+    $ kill 45469
+    $ make launch
+
+
+Known issues
+================================================================================
+
+- File upload does not work. When you click the "Choose file" button in the
+  "New File" interface, the file browse menu does not open up.
+- Keyboard copy/paste does not work. Apparently, "On OS X you have to
+  explicitly add menu items for Copy/Paste to make them work". See
+  https://github.com/electron/electron/issues/2308.
 
 
 .. _`DativeBase`: https://github.com/dativebase/dativebase

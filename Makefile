@@ -6,19 +6,28 @@ export DATIVETOP_DATIVE_SERVERS_REL = dist/servers.json
 export DATIVETOP_DATIVE_SERVERS = ${DATIVETOP_DATIVE_SRC}/${DATIVETOP_DATIVE_SERVERS_REL}
 
 export OLD_DB_RDBMS = sqlite
+export OLD_SESSION_TYPE = file
 export HERE = $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 export OLD_PERMANENT_STORE = oldinstances
 export OLD_DB_DIRPATH = ${HERE}/${OLD_PERMANENT_STORE}/dbs
-export OLD_SESSION_TYPE = file
+
 export DFLT_DATIVETOP_OLD_NAME = myold
+export DFLT_DATIVETOP_OLD_DIR_PATH = ${OLD_PERMANENT_STORE}/${DFLT_DATIVETOP_OLD_NAME}
+export DFLT_DATIVETOP_OLD_DB_PATH = ${OLD_DB_DIRPATH}/${DFLT_DATIVETOP_OLD_NAME}.sqlite
 
 create-old-instance:  ## Create an OLD instance named OLD_NAME: create a directory structure for it, an SQLite database with tables pre-populated, and register it with Dative
 	initialize_old ${DATIVETOP_OLD_SRC}/config.ini $(OLD_NAME); \
+		DATIVETOP_OLD_PORT=${DATIVETOP_OLD_PORT} \
+		DATIVETOP_DATIVE_SERVERS=${DATIVETOP_DATIVE_SERVERS} \
+		DATIVETOP_IP=${DATIVETOP_IP} \
 		python dativetop/scripts/register-old-with-dative.py create $(OLD_NAME)
 
 destroy-old-instance:  ## Destroy OLD instance OLD_NAME's files on disk and its SQLite database and de-register it from Dative
 	rm -r ${OLD_PERMANENT_STORE}/$(OLD_NAME) || true; \
 	rm ${OLD_PERMANENT_STORE}/dbs/$(OLD_NAME).sqlite || true; \
+		DATIVETOP_OLD_PORT=${DATIVETOP_OLD_PORT} \
+		DATIVETOP_DATIVE_SERVERS=${DATIVETOP_DATIVE_SERVERS} \
+		DATIVETOP_IP=${DATIVETOP_IP} \
 		python dativetop/scripts/register-old-with-dative.py destroy $(OLD_NAME)
 
 build-dative:  ## Build Dative: install NPM dependencies, compile/minify JS and reset its servers array
@@ -30,19 +39,41 @@ build-dative:  ## Build Dative: install NPM dependencies, compile/minify JS and 
 launch:  ## Launch DativeTop in development mode
 	python -m dativetop
 
-build-mac-os:  ## Build a DativeTop .app bundle for Mac OS
-	initialize_old ${DATIVETOP_OLD_SRC}/config.ini ${DFLT_DATIVETOP_OLD_NAME}; \
-		python dativetop/scripts/register-old-with-dative.py create ${DFLT_DATIVETOP_OLD_NAME}; \
-		DFLT_DATIVETOP_OLD_NAME=${DFLT_DATIVETOP_OLD_NAME} beeware build macOS
+register-old-with-dative:  ## Register the default OLD instance with Dative's list of known servers
+	DATIVETOP_OLD_PORT=${DATIVETOP_OLD_PORT} \
+					   DATIVETOP_DATIVE_SERVERS=${DATIVETOP_DATIVE_SERVERS} \
+					   DATIVETOP_IP=${DATIVETOP_IP} \
+					   python dativetop/scripts/register-old-with-dative.py create ${DFLT_DATIVETOP_OLD_NAME}
+
+beeware-build-mac-os:  ## Build the DativeTop .app bundle for Mac OS
+	DFLT_DATIVETOP_OLD_NAME=${DFLT_DATIVETOP_OLD_NAME} beeware build macOS
+
+build-mac-os: bootstrap-old register-old-with-dative beeware-build-mac-os  ## Build a DativeTop .app bundle for Mac OS
+
+dmg:  ## Build a DativeTop .dmg bundle for Mac OS
+	find macOS/ | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf; \
+		hdiutil create -volname DativeTop.dmg -srcfolder macOS/DativeTop.app -ov -format UDZO DativeTop.dmg
+
+release-mac-os: build-mac-os dmg  ## Build for Mac OS and create a .dmg file
 
 run-mac-os:  ## Build and run DativeTop .app bundle for Mac OS
 	beeware run macOS
 
+flush-dative:  # Reset Dative's known OLDs (servers)
+	echo "[]" > ${DATIVETOP_DATIVE_SERVERS_REL}
+
+flush-old:  # Destroy the default OLD instance's SQLite database and directory structure
+	rm -r ${DFLT_DATIVETOP_OLD_DIR_PATH} || true; \
+		rm ${DFLT_DATIVETOP_OLD_DB_PATH} || true
+
+initialize-old:  # Create the default OLD instance's SQLite database and directory structure
+	initialize_old ${DATIVETOP_OLD_SRC}/config.ini ${DFLT_DATIVETOP_OLD_NAME}
+
+flush: flush-dative flush-old  ## Delete ALL user data
+
+bootstrap-old: flush-old initialize-old  ## Generate a new default OLD database and directory structure, deleting any previous ones
 
 help:  ## Print this help message.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
-
-fart:
-	export DFLT_DATIVETOP_OLD_NAME='myold'
 
 .DEFAULT_GOAL := help

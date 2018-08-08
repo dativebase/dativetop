@@ -8,8 +8,8 @@ export DATIVETOP_DATIVE_SERVERS = ${DATIVETOP_DATIVE_SRC}/${DATIVETOP_DATIVE_SER
 export OLD_DB_RDBMS = sqlite
 export OLD_SESSION_TYPE = file
 export HERE = $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-export OLD_PERMANENT_STORE = oldinstances
-export OLD_DB_DIRPATH = ${HERE}/${OLD_PERMANENT_STORE}/dbs
+export OLD_PERMANENT_STORE = ${HERE}/oldinstances
+export OLD_DB_DIRPATH = ${OLD_PERMANENT_STORE}/dbs
 
 export DFLT_DATIVETOP_OLD_NAME = myold
 export DFLT_DATIVETOP_OLD_DIR_PATH = ${OLD_PERMANENT_STORE}/${DFLT_DATIVETOP_OLD_NAME}

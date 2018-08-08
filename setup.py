@@ -39,6 +39,14 @@ def install_extras(self):
             os.makedirs(pth)
     logger.info('Created source directories under %s.', src_pth)
 
+    private_resources_src_pth = os.path.join('dativetop', 'private_resources')
+    private_resources_dst_pth = os.path.join(
+        self.app_dir, 'dativetop', 'private_resources')
+    if os.path.exists(private_resources_dst_pth):
+        shutil.rmtree(private_resources_dst_pth)
+    shutil.copytree(private_resources_src_pth, private_resources_dst_pth)
+    logger.info('Copied DativeTop private resources to %s.', private_resources_dst_pth)
+
     dative_src_pth = os.path.join('src', 'dative', 'dist')
     dative_dst_pth = os.path.join(self.app_dir, 'src', 'dative', 'dist')
     if os.path.exists(dative_dst_pth):
@@ -109,9 +117,6 @@ with io.open('README.rst', encoding='utf8') as readme:
     long_description = readme.read()
 
 
-#TODO: install pyperclip
-
-
 setup(
     name='dativetop',
     version=version,
@@ -120,6 +125,9 @@ setup(
     author='Joel Dunham',
     author_email='jrwdunham@gmail.com',
     license='Apache Software License',
+    install_requires=[
+        'pyperclip',
+    ],
     packages=find_packages(
         exclude=[
             'docs', 'tests',
@@ -133,10 +141,6 @@ setup(
         'Development Status :: 1 - Planning',
         'License :: OSI Approved :: Apache Software License',
     ],
-    package_data={
-        'dativetop': ['src/dative'],
-    },
-    include_package_data=True,
     options={
         'app': {
             'formal_name': 'DativeTop',

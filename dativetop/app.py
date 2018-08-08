@@ -1,24 +1,34 @@
+"""DativeTop: a Toga app that serves Dative and the OLD locally.
+
+DativeTop transforms Dative/OLD into a desktop application using Toga. It
+serves the Dative JavaScript/CoffeeScript GUI (SPA) locally and displays it in
+a native WebView. It also serves the OLD locally. The local Dative instance can
+then be used to interact with the OLD instances being served by the local OLD.
+
+The ultimate goal is to be able to distribute native binaries so that DativeTop
+can be easily installed and launched as a desktop application by non-technical
+users.
+"""
+
 from http.server import SimpleHTTPRequestHandler
 import io
 import json
 import os
 import posixpath
-import pyperclip
 import re
 import socketserver
+import subprocess
 import sys
 import threading
 import urllib.parse
 import webbrowser
-from wsgiref.simple_server import make_server
 
 from paste.deploy import appconfig
+import pyperclip
 import toga
 from toga.style import Pack
-from toga.style.pack import COLUMN, ROW, CENTER, LEFT, RIGHT, BOLD
-from toga_cocoa.libs import NSDocumentController, NSOpenPanel, NSMutableArray
+from toga.style.pack import COLUMN, CENTER
 
-from old import main as old_main
 
 HERE = os.path.dirname(os.path.dirname(__file__))
 
@@ -47,6 +57,7 @@ os.environ['OLD_DB_RDBMS'] = 'sqlite'
 os.environ['OLD_SESSION_TYPE'] = 'file'
 
 
+# JavaScript to copy any selected text
 COPY_SELECTION_JS = (
     'if (window.getSelection) {\n'
     '  window.getSelection().toString();\n'
@@ -55,6 +66,7 @@ COPY_SELECTION_JS = (
     '}')
 
 
+# JavaScript/jQuery to cut (copy and remove) any selected text
 CUT_SELECTION_JS = (
     "var focused = $(':focus');\n"
     "var focused_ntv = focused[0];\n"
@@ -69,12 +81,16 @@ CUT_SELECTION_JS = (
 )
 
 
+# JavaScript/jQuery to select all text
 SELECT_ALL_JS = (
     "$(':focus').select();"
 )
 
 
 def paste_js(clipboard):
+    """Paste the string ``clipboard`` into the selected text of the focused
+    element in the DOM using JavaScript/jQuery.
+    """
     return (
         "var focused = $(':focus');\n"
         "var focused_ntv = focused[0];\n"
@@ -90,43 +106,71 @@ def paste_js(clipboard):
 
 def get_dativetop_version():
     version_file_path = os.path.join(HERE, 'dativetop', '__init__.py')
-    with io.open(version_file_path, encoding='utf8') as version_file:
-        version_match = re.search(
-            r"^__version__ = ['\"]([^'\"]*)['\"]", version_file.read(), re.M)
-        if version_match:
-            return version_match.group(1)
-        else:
-            raise RuntimeError("Unable to find DativeTop version string.")
-
-
-# TODO: these version getters do NOT work on build DativeTops because the
-# source files are in different locations.
+    try:
+        with io.open(version_file_path, encoding='utf8') as version_file:
+            version_match = re.search(
+                r"^__version__ = ['\"]([^'\"]*)['\"]", version_file.read(), re.M)
+            if version_match:
+                return version_match.group(1)
+            print('Unable to find DativeTop version in {}'.format(
+                version_file_path))
+            return 'unknown'
+    except Exception:
+        print('Unable to find DativeTop version in {}'.format(version_file_path))
+        return 'unknown'
 
 
 def get_dative_version():
     dative_pkg_path = os.path.join(DATIVE_ROOT, 'package.json')
-    with io.open(dative_pkg_path) as filei:
-        dative_pkj_json = json.load(filei)
-    return dative_pkj_json['version']
+    try:
+        with io.open(dative_pkg_path) as filei:
+            dative_pkj_json = json.load(filei)
+        return dative_pkj_json['version']
+    except Exception:
+        print('Unable to find Dative package.json at {}'.format(dative_pkg_path))
+        return 'unknown'
 
 
 def get_old_version():
+    old_info_path = os.path.join(HERE, 'old', 'views', 'info.py')
     old_setup_path = os.path.join(OLD_DIR, 'setup.py')
-    with io.open(old_setup_path, encoding='utf8') as version_file:
-        version_match = re.search(
-            r"^VERSION = ['\"]([^'\"]*)['\"]", version_file.read(), re.M)
-        if version_match:
-            return version_match.group(1)
-        else:
-            raise RuntimeError("Unable to find OLD version string.")
+    if os.path.isfile(old_setup_path):
+        try:
+            with io.open(old_setup_path, encoding='utf8') as version_file:
+                version_match = re.search(
+                    r"^VERSION = ['\"]([^'\"]*)['\"]", version_file.read(), re.M)
+                if version_match:
+                    return version_match.group(1)
+                else:
+                    raise RuntimeError("Unable to find OLD version string.")
+        except Exception:
+            print('Unable to find OLD setup.py at {}'.format(old_setup_path))
+            return 'unknown'
+    elif os.path.isfile(old_info_path):
+        try:
+            with io.open(old_info_path, encoding='utf8') as version_file:
+                version_match = re.search(
+                    r"^\s*['\"]version['\"]:\s+['\"]([^'\"]*)['\"]", version_file.read(), re.M)
+                if version_match:
+                    return version_match.group(1)
+                else:
+                    raise RuntimeError("Unable to find OLD version string.")
+        except Exception:
+            print('Unable to find OLD info.py at {}'.format(old_info_path))
+            return 'unknown'
+    else:
+        print('Neither of these files exist so unable to get OLD version: {}'
+              ' {}'.format(old_setup_path, old_info_path))
+        return 'unknown'
 
 
 def translate_path(path, root):
     """Direct copy of /http/server.py except that ``root`` replaces the call
-    to ``os.getcwd()``.
+    to ``os.getcwd()``. This is needed so that we can serve the static files of
+    Dative without calling os.chdir (which would mess up serving the OLD).
     """
-    path = path.split('?',1)[0]
-    path = path.split('#',1)[0]
+    path = path.split('?', 1)[0]
+    path = path.split('#', 1)[0]
     trailing_slash = path.rstrip().endswith('/')
     try:
         path = urllib.parse.unquote(path, errors='surrogatepass')
@@ -146,9 +190,6 @@ def translate_path(path, root):
 
 
 def launch_dativetop():
-    """Launch the Dative Toga application, which right now is just a webview
-    for displaying the Dative JavaScript application.
-    """
     icon = toga.Icon('icons/OLDIcon.icns')
     app = DativeTop(name=APP_NAME,
                     app_id=APP_ID,
@@ -170,78 +211,17 @@ class DativeTop(toga.App):
             position=(0, 0),
         )
         self.webview = toga.WebView(style=Pack(flex=1))
-
-        #print('webview native...')
-        #print(self.webview._impl.native)
-        #print('\n'.join(dir(self.webview._impl)))
-
         self.main_window.content = self.webview
         self.webview.url = DATIVE_URL
         self.set_commands()
         self.main_window.show()
 
-    def about_cmd(self, sender):
-        about_window = self.get_about_window()
-        about_window.show()
-
-    def open_file_cmd(self, sender):
-        print('open file dialog')
-        # from toga_cocoa import NSDocumentController, NSOpenPanel
-        panel = NSOpenPanel.openPanel()
-        #self.main_window.open_file_dialog('Open a fricking file')
-        toga.Window().open_file_dialog('a fricking file')
-
-        """
-        print('=' * 80)
-        print('NSOpenPanel')
-        print(NSOpenPanel)
-        print(type(NSOpenPanel))
-        for x in dir(NSOpenPanel):
-            if not x.startswith('_'):
-                print(x)
-                print(getattr(NSOpenPanel, x))
-                print('\n')
-        print('=' * 80)
-
-        print('=' * 80)
-        print('panel')
-        print(panel)
-        print(type(panel))
-        for x in dir(panel):
-            if not x.startswith('_'):
-                print(x)
-                print(getattr(panel, x))
-                print('\n')
-        print('=' * 80)
-
-        fileTypes = NSMutableArray.alloc().init()
-
-        print('self._impl')
-        print(self._impl)
-        print(type(self._impl))
-        print(dir(self._impl))
-        print(dir(self._impl.native))
-
-        #self._impl.application_openFiles_(None, panel.URLs)
-        import pydoc
-        xhelp = pydoc.render_doc(self._impl.application_openFiles_)
-        print(xhelp)
-
-
-        for filetype in self._impl.document_types:
-            fileTypes.addObject(filetype)
-        NSDocumentController.sharedDocumentController.runModalOpenPanel(
-            panel, forTypes=fileTypes)
-        print("Untitled File opened?", panel.URLs)
-        self.application_openFiles_(None, panel.URLs)
-        """
-
-
-
-
     def get_about_window(self):
         """Return the "About" window: a Toga window with the DativeTop icon and
         the versions of DativeTop, Dative and the OLD displayed.
+        TODO: it would be nice if the text could be center-aligned underneath
+        the DativeTop icon. Unfortunately, I found it difficult to do this
+        using Toga's box model and ``Pack`` layout engine.
         """
         if self._about_window:
             return self._about_window
@@ -288,6 +268,10 @@ class DativeTop(toga.App):
         self._about_window = about_window
         return self._about_window
 
+    def about_cmd(self, sender):
+        about_window = self.get_about_window()
+        about_window.show()
+
     def copy_cmd(self, sender):
         pyperclip.copy(str(self.webview.evaluate(COPY_SELECTION_JS)))
 
@@ -298,7 +282,7 @@ class DativeTop(toga.App):
         self.webview.evaluate(SELECT_ALL_JS)
 
     def paste_cmd(self, sender):
-        self.webview.evaluate(paste_js(pyperclip.paste().replace('`', '\`')))
+        self.webview.evaluate(paste_js(pyperclip.paste().replace('`', r'\`')))
 
     def reload_cmd(self, sender):
         self.webview.url = DATIVE_URL
@@ -317,6 +301,14 @@ class DativeTop(toga.App):
     def visit_dative_web_site_cmd(sender):
         webbrowser.open(DATIVE_WEB_SITE_URL, new=1, autoraise=True)
 
+    @staticmethod
+    def visit_dative_in_browser_cmd(sender):
+        webbrowser.open(DATIVE_URL, new=1, autoraise=True)
+
+    @staticmethod
+    def visit_old_in_browser_cmd(sender):
+        webbrowser.open('{}/old/'.format(OLD_URL), new=1, autoraise=True)
+
     def quit_cmd(self, sender):
         self.exit()
 
@@ -327,13 +319,6 @@ class DativeTop(toga.App):
             self.about_cmd,
             label='About DativeTop',
             group=toga.Group.APP,
-            section=0)
-
-        open_file_cmd = toga.Command(
-            self.open_file_cmd,
-            label='Open',
-            shortcut='o',
-            group=toga.Group.FILE,
             section=0)
 
         cut_cmd = toga.Command(
@@ -371,15 +356,29 @@ class DativeTop(toga.App):
             group=toga.Group.APP,
             section=sys.maxsize)
 
+        visit_dative_in_browser_cmd = toga.Command(
+            self.visit_dative_in_browser_cmd,
+            label='Visit Dative in Browser',
+            group=toga.Group.HELP,
+            order=0)
+
+        visit_old_in_browser_cmd = toga.Command(
+            self.visit_old_in_browser_cmd,
+            label='Visit OLD in Browser',
+            group=toga.Group.HELP,
+            order=1)
+
         visit_old_web_site_cmd = toga.Command(
             self.visit_old_web_site_cmd,
             label='Visit OLD Web Site',
-            group=toga.Group.HELP)
+            group=toga.Group.HELP,
+            order=3)
 
         visit_dative_web_site_cmd = toga.Command(
             self.visit_dative_web_site_cmd,
             label='Visit Dative Web Site',
-            group=toga.Group.HELP)
+            group=toga.Group.HELP,
+            order=2)
 
         reload_cmd = toga.Command(
             self.reload_cmd,
@@ -405,8 +404,6 @@ class DativeTop(toga.App):
             # DativeTop
             about_cmd,
             quit_cmd,
-            # File
-            open_file_cmd,
             # Edit
             cut_cmd,
             copy_cmd,
@@ -418,21 +415,18 @@ class DativeTop(toga.App):
             back_cmd,
             forward_cmd,
             # Help
+            visit_dative_in_browser_cmd,
+            visit_old_in_browser_cmd,
             visit_old_web_site_cmd,
             visit_dative_web_site_cmd,
         )
 
 
 def _serve_old():
+    """Serve the OLD using ``pserve`` while also printing its log messages to
+    the main process's stdout.
+    """
     os.chdir(OLD_DIR)
-
-    """
-    app = old_main(OLD_CONFIG, **OLD_SETTINGS)
-    server = make_server(IP, OLD_PORT, app)
-    server.serve_forever()
-    """
-
-    import subprocess
     cmd = [
         'pserve',
         '--reload',
@@ -440,8 +434,15 @@ def _serve_old():
         'http_port={}'.format(OLD_PORT),
         'http_host={}'.format(IP),
     ]
-    subprocess.check_output(cmd)
-
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    while True:
+        output = process.stdout.readline()
+        if output == '' and process.poll() is not None:
+            break
+        if output:
+            print(output.strip())
+    rc = process.poll()
+    return rc
 
 
 def serve_old():

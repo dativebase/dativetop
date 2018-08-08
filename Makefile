@@ -51,7 +51,7 @@ beeware-build-mac-os:  ## Build the DativeTop .app bundle for Mac OS
 build-mac-os: bootstrap-old register-old-with-dative beeware-build-mac-os  ## Build a DativeTop .app bundle for Mac OS
 
 dmg:  ## Build a DativeTop .dmg bundle for Mac OS
-	find macOS/ | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf; \
+	find macOS/ | grep -E "(__pycache__|\.pyc|\.pyo$$)" | xargs rm -rf; \
 		hdiutil create -volname DativeTop.dmg -srcfolder macOS/DativeTop.app -ov -format UDZO DativeTop.dmg
 
 release-mac-os: build-mac-os dmg  ## Build for Mac OS and create a .dmg file
@@ -63,7 +63,8 @@ flush-dative:  # Reset Dative's known OLDs (servers)
 	echo "[]" > ${DATIVETOP_DATIVE_SERVERS_REL}
 
 flush-old:  # Destroy the default OLD instance's SQLite database and directory structure
-	rm -r ${DFLT_DATIVETOP_OLD_DIR_PATH} || true; \
+	mkdir -p ${OLD_DB_DIRPATH}; \
+		rm -r ${DFLT_DATIVETOP_OLD_DIR_PATH} || true; \
 		rm ${DFLT_DATIVETOP_OLD_DB_PATH} || true
 
 initialize-old:  # Create the default OLD instance's SQLite database and directory structure

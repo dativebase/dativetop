@@ -1,5 +1,5 @@
 ================================================================================
-DativeTop: `DativeBase`_ as a desktop application
+DativeTop: `DativeBase`_ as a Desktop Application
 ================================================================================
 
 `DativeBase`_ is *web-based* software for linguistic fieldwork. DativeTop is
@@ -17,11 +17,12 @@ Applications folder, and double-click on DativeTop.app to start a running
 DativeTop that just works.
 
 But DativeTop is not there yet. In the meantime, if you are feeling
-adventurous, you can try to build and run DativeTop on your Mac using the
-`Build`_ instructions below.
+adventurous, you can try to install DativeTop's dependencies and either run it
+in development mode or build the native binaries yourself using the
+instructions in the sections that follow.
 
 
-Build
+Install from Source
 ================================================================================
 
 First, Ensure that you have GNU Make installed by running ``make -v``. Then
@@ -33,66 +34,31 @@ create and activate a Python 3.6 (or 3.5) virtual environment::
     $ source venv/bin/activate
     (venv) $
 
+Making sure you are in the directory containing this file, clone the Dative and
+OLD submodules using the following git command::
 
-Build for Mac OS X
---------------------------------------------------------------------------------
+    (venv) $ git submodule update --init --recursive
 
-Move into the directory containing this file and run the following command::
+Then build Dative, i.e., compile its CoffeeScript source to a single minified
+JavaScript file. (Note: you must install NodeJS first in order for this to
+work; on a mac ``brew install node`` should work.)::
 
-    (env) $ make build-mac-os
+    (venv) $ make build-dative
 
-If the above succeeds, you should have a directory named DativeTop.app under
-macOS/. Double-clicking this should open DativeTop, which will display Dative.
-You should be able to login to the default *myold* OLD instance with username
-*admin* and password *adminA_1*.
+Finally, install the `BeeWare`_ suite, the OLD's requirements, and the OLD
+itself in development mode::
 
+    (venv) $ pip install beeware
+    (venv) $ pip install -r src/old/requirements/test.txt
+    (venv) $ pip install -e src/old/
 
-Build for Linux and Windows
---------------------------------------------------------------------------------
+You should now be able to launch DativeTop with the following command::
 
-TODO.
-
-
-Troubleshooting
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-If the above does not work, you can launch DativeTop manually in another way
-(besides double-clicking on DativeTop.app) such that any exceptions that are
-raised by the underlying Python code are viewable in the terminal::
-
-    (env) $ macOS/DativeTop.app/Contents/MacOS/DativeTop
-
-
-For Developers
-================================================================================
-
-First, create (if necessary) and activate a Python 3.6/5 virtual environment as
-explained above.
-
-Then install DativeTop's requirements as well as those of the OLD submodule
-and the OLD itself in development mode::
-
-    (venv) $ pip install -r requirements/base.txt -e src/old/
-
-Use the Makefile to see the convenience commands that are available::
-
-    $ make help
-    ...
-
-In general, you will want to build Dative, create an OLD instance, and then
-launch DativeTop::
-
-    $ make build-dative
-    $ make create-old-instance OLD_NAME=myold
     $ make launch
 
-Note: the ``create-old-instance`` command will create a SQLite database file in
-``oldinstances/dbs/`` as well as a directory for your OLD instance's files in
-``oldinstances/``. The corresponding "undo" command, which destroys an OLD
-instance's database and directory structure, is ``destroy-old-instance``.
-
-DativeTop should open a window (WebView) wherein Dative is running. You should
-now be able to login to the OLD named ``myold`` from the Dative interface using
+The above command should open DativeTop in a native window for your platform.
+That window will display a WebView wherein Dative should be running. You should
+be able to login to the OLD named ``myold`` from the Dative interface using
 username *admin* and password *adminA_1*. Note that Dative and the OLD will be
 being served locally so you can view them in a regular browser at the following
 URLs:
@@ -114,15 +80,85 @@ kill it::
     $ make launch
 
 
+Developer Hints
+--------------------------------------------------------------------------------
+
+To view the convenience ``make`` commands that are available::
+
+    $ make help
+
+In a typical development workflow, you will want to build Dative, create an OLD
+instance, and then launch DativeTop using the following commands::
+
+    $ make build-dative
+    $ make create-old-instance OLD_NAME=myold
+    $ make launch
+
+Note: the ``create-old-instance`` command will create a SQLite database file in
+``oldinstances/dbs/`` as well as a directory for your OLD instance's files in
+``oldinstances/``. The corresponding "undo" command, which destroys an OLD
+instance's database and directory structure, is ``destroy-old-instance``.
+
+
+Build
+================================================================================
+
+Building DativeTop means constructing native application packages for a
+particular target platform, e.g., Mac OS X or Windows.
+
+
+Build for Mac OS X
+--------------------------------------------------------------------------------
+
+Run the following command::
+
+    (venv) $ make build-mac-os
+
+If the above succeeds, you should have a directory named DativeTop.app under
+macOS/. Double-clicking this should open DativeTop, which will display Dative.
+You should be able to login to the default *myold* OLD instance with username
+*admin* and password *adminA_1*.
+
+To build a mountable disk image containing DativeTop.app (i.e., a DMG file)::
+
+    (venv) $ make release-mac-os
+
+
+Troubleshooting
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+If you double-click on DativeTop.app and the application does not work as
+expected, you can launch DativeTop manually such that any exceptions that are
+raised by the underlying Python code are viewable in the terminal::
+
+    (venv) $ macOS/DativeTop.app/Contents/MacOS/DativeTop
+
+
+Build for Linux and Windows
+--------------------------------------------------------------------------------
+
+TODO.
+
+
 Known issues
 ================================================================================
 
-- File upload does not work. When you click the "Choose file" button in the
-  "New File" interface, the file browse menu does not open up.
+File upload does not work on Mac OS X
+--------------------------------------------------------------------------------
+
+When you click the "Choose file" button in the "New File" interface, the file
+browse menu does not open up.  This is a known issue with Toga related to the
+Cocoa WebView widget. See the `DativeTop cannot upload files`_ issue on GitHub.
+
+The workaround at present is to open DativeTop's local Dative in a browser and
+do your file upload from there. DativeTop makes this easy: click on the "Help"
+menu and then click "Visit Dative in Browser".
 
 
+.. _`DativeTop cannot upload files`: https://github.com/dativebase/dativebase/issues/16
 .. _`DativeBase`: https://github.com/dativebase/dativebase
 .. _`Dative`: https://github.com/dativebase/dative
 .. _`OLD`: https://github.com/dativebase/old-pyramid
+.. _`BeeWare`: https://github.com/pybee/beeware
 .. _`Toga`: https://github.com/pybee/toga
 .. _`Briefcase`: https://github.com/pybee/briefcase

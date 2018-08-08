@@ -109,6 +109,9 @@ with io.open('README.rst', encoding='utf8') as readme:
     long_description = readme.read()
 
 
+#TODO: install pyperclip
+
+
 setup(
     name='dativetop',
     version=version,

@@ -2,10 +2,9 @@
 DativeTop: `DativeBase`_ as a desktop application
 ================================================================================
 
-`DativeBase`_ (`Dative`_ + the `Online Linguistic Database (OLD)`_) is
-*web-based* software for linguistic fieldwork. DativeTop is the DativeBase as a
-*desktop* application. It is the Dative and the OLD wrapped in a `Toga`_ and
-packaged into a `Briefcase`_.
+`DativeBase`_ is *web-based* software for linguistic fieldwork. DativeTop is
+DativeBase as a *desktop* application. It is `Dative`_ and the `OLD`_ wrapped
+in a `Toga`_ and packaged into a `Briefcase`_.
 
 
 Install
@@ -19,13 +18,13 @@ DativeTop that just works.
 
 But DativeTop is not there yet. In the meantime, if you are feeling
 adventurous, you can try to build and run DativeTop on your Mac using the
-`Build and install`_ instructions below.
+`Build`_ instructions below.
 
 
-Build and install
+Build
 ================================================================================
 
-First, Ensure that you have GNU Make installed by running ``make -v``. Then,
+First, Ensure that you have GNU Make installed by running ``make -v``. Then
 create and activate a Python 3.6 (or 3.5) virtual environment::
 
     $ python3 --version
@@ -43,9 +42,15 @@ Move into the directory containing this file and run the following command::
     (env) $ make build-mac-os
 
 If the above succeeds, you should have a directory named DativeTop.app under
-macOS/. Double-clicking this should open up DativeTop which will display
-Dative. You should be able to login to the *myold* OLD instance with username
+macOS/. Double-clicking this should open DativeTop, which will display Dative.
+You should be able to login to the default *myold* OLD instance with username
 *admin* and password *adminA_1*.
+
+
+Build for Linux and Windows
+--------------------------------------------------------------------------------
+
+TODO.
 
 
 Troubleshooting
@@ -53,8 +58,7 @@ Troubleshooting
 
 If the above does not work, you can launch DativeTop manually in another way
 (besides double-clicking on DativeTop.app) such that any exceptions that are
-raised by the underlying Python code are viewable in the terminal. Run this
-command in the terminal::
+raised by the underlying Python code are viewable in the terminal::
 
     (env) $ macOS/DativeTop.app/Contents/MacOS/DativeTop
 
@@ -83,9 +87,9 @@ launch DativeTop::
     $ make launch
 
 Note: the ``create-old-instance`` command will create a SQLite database file in
-oldinstances/dbs/ as well as a directory for your OLD instance's files in
-oldinstances/. The "undo" command, which destroys an OLD instance's database
-and directory structure is ``destroy-old-instance``.
+``oldinstances/dbs/`` as well as a directory for your OLD instance's files in
+``oldinstances/``. The corresponding "undo" command, which destroys an OLD
+instance's database and directory structure, is ``destroy-old-instance``.
 
 DativeTop should open a window (WebView) wherein Dative is running. You should
 now be able to login to the OLD named ``myold`` from the Dative interface using
@@ -98,7 +102,7 @@ URLs:
 
 
 Troubleshooting
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+--------------------------------------------------------------------------------
 
 If you launch DativeTop and see a blank screen, it may be that a previous
 DativeTop was not shut down correctly. Search for the offending process and
@@ -115,13 +119,10 @@ Known issues
 
 - File upload does not work. When you click the "Choose file" button in the
   "New File" interface, the file browse menu does not open up.
-- Keyboard copy/paste does not work. Apparently, "On OS X you have to
-  explicitly add menu items for Copy/Paste to make them work". See
-  https://github.com/electron/electron/issues/2308.
 
 
 .. _`DativeBase`: https://github.com/dativebase/dativebase
 .. _`Dative`: https://github.com/dativebase/dative
-.. _`Online Linguistic Database (OLD)`: https://github.com/dativebase/old-pyramid
+.. _`OLD`: https://github.com/dativebase/old-pyramid
 .. _`Toga`: https://github.com/pybee/toga
 .. _`Briefcase`: https://github.com/pybee/briefcase

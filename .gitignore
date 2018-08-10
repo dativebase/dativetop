@@ -68,3 +68,6 @@ django/
 
 oldinstances/
 !dativetop/icons/
+docker-wine/
+docker-wix/
+winebin/

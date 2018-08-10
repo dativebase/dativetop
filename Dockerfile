@@ -1,21 +1,20 @@
-FROM python:3.5-alpine3.8
+#FROM python:3.5-alpine3.8
+FROM python:3.5-stretch
 
-RUN apk update
-RUN apk add wine xvfb
+#RUN apk add --no-cache wine xvfb
+#RUN apt-get update && apt-get install -y \
+  #wine \
+  #xvfb
+RUN dpkg --add-architecture i386 && apt-get update && apt-get install -y wine32 xvfb
 
 COPY ./winebin/winetricks /usr/local/bin/winetricks
 COPY ./winebin/xvfb-run /usr/local/bin/xvfb-run
 
-# Prefix commands passed into bash so that they run in xvfb
-ENTRYPOINT xvfb-run -a wine
-
-
-RUN apk add wget
+RUN chmod 0755 /usr/local/bin/xvfb-run
 
 # Wine really doesn't like to be run as root, so let's set up a non-root
 # environment
-
-RUN adduser -S -h /home/wix wix
+RUN adduser --system --home /home/wix wix
 USER wix
 ENV HOME /home/wix
 ENV WINEPREFIX /home/wix/.wine

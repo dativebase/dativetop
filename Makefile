@@ -46,7 +46,7 @@ register-old-with-dative:  ## Register the default OLD instance with Dative's li
 					   python dativetop/scripts/register-old-with-dative.py create ${DFLT_DATIVETOP_OLD_NAME}
 
 beeware-build-mac-os:  ## Build the DativeTop .app bundle for Mac OS
-	DFLT_DATIVETOP_OLD_NAME=${DFLT_DATIVETOP_OLD_NAME} beeware build macOS
+	DFLT_DATIVETOP_OLD_NAME=${DFLT_DATIVETOP_OLD_NAME} python setup.py macos -v
 
 build-mac-os: bootstrap-old register-old-with-dative beeware-build-mac-os  ## Build a DativeTop .app bundle for Mac OS
 

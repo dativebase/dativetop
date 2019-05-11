@@ -41,7 +41,7 @@ OLD submodules using the following git command::
 
 Then build Dative, i.e., compile its CoffeeScript source to a single minified
 JavaScript file. (Note: you must install NodeJS first in order for this to
-work; on a mac ``brew install node`` should work.)::
+work; on a Mac ``brew install node`` should work.)::
 
     (venv) $ make build-dative
 
@@ -109,6 +109,14 @@ particular target platform, e.g., Mac OS X or Windows.
 
 Build for Mac OS X
 --------------------------------------------------------------------------------
+
+Previous ``beeware-build-mac-os`` command::
+
+    DFLT_DATIVETOP_OLD_NAME=${DFLT_DATIVETOP_OLD_NAME} beeware build macOS
+
+New ``beeware-build-mac-os`` command::
+
+    DFLT_DATIVETOP_OLD_NAME=${DFLT_DATIVETOP_OLD_NAME} python setup.py macos -s
 
 Run the following command::
 

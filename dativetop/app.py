@@ -16,6 +16,7 @@ import json
 import os
 import posixpath
 import re
+import socket
 import socketserver
 import subprocess
 import sys
@@ -27,13 +28,15 @@ from paste.deploy import appconfig
 import pyperclip
 import toga
 from toga.style import Pack
-from toga.style.pack import COLUMN, CENTER
+from toga.style.pack import COLUMN, ROW, LEFT, RIGHT
 
 
 HERE = os.path.dirname(os.path.dirname(__file__))
 
 APP_NAME = 'DativeTop'
 APP_ID = 'org.dativebase.dativetop'
+ICONS_FILE_NAME = 'OLDIcon.icns'
+ICONS_FILE_PATH = os.path.join('icons', ICONS_FILE_NAME)
 IP = '127.0.0.1'
 
 DATIVE_WEBSITE_URL = 'http://www.dative.ca/'
@@ -189,19 +192,30 @@ def translate_path(path, root):
     return path
 
 
-def launch_dativetop():
+def launch_dativetop(stop_serving_dative, stop_serving_old):
     icon = toga.Icon('icons/OLDIcon.icns')
-    app = DativeTop(name=APP_NAME,
+    app = DativeTop(stop_serving_dative,
+                    stop_serving_old,
+                    name=APP_NAME,
                     app_id=APP_ID,
                     icon=icon)
     app.main_loop()
 
 
+def launch_dativetop_new():
+    return DativeTop(
+        APP_NAME,
+        APP_ID,
+        icon=ICONS_FILE_PATH)
+
+
 class DativeTop(toga.App):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, stop_serving_dative, stop_serving_old, *args, **kwargs):
         self._about_window = None
         self.webview = None
+        self.stop_serving_dative = stop_serving_dative
+        self.stop_serving_old = stop_serving_old
         super(DativeTop, self).__init__(*args, **kwargs)
 
     def startup(self):
@@ -310,6 +324,8 @@ class DativeTop(toga.App):
         webbrowser.open('{}/old/'.format(OLD_URL), new=1, autoraise=True)
 
     def quit_cmd(self, sender):
+        self.stop_serving_dative()
+        self.stop_serving_old()
         self.exit()
 
     def set_commands(self):
@@ -422,10 +438,7 @@ class DativeTop(toga.App):
         )
 
 
-def _serve_old():
-    """Serve the OLD using ``pserve`` while also printing its log messages to
-    the main process's stdout.
-    """
+def fork_old_server_process():
     os.chdir(OLD_DIR)
     cmd = [
         'pserve',
@@ -434,22 +447,29 @@ def _serve_old():
         'http_port={}'.format(OLD_PORT),
         'http_host={}'.format(IP),
     ]
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    return subprocess.Popen(cmd, stdout=subprocess.PIPE)
+
+
+def monitor_old_server_process(process=None):
     while True:
         output = process.stdout.readline()
         if output == '' and process.poll() is not None:
             break
         if output:
-            print(output.strip())
+            print(output.decode('utf8').strip())
     rc = process.poll()
     return rc
 
 
 def serve_old():
+    process = fork_old_server_process()
     thread1 = threading.Thread(
-        target=_serve_old, kwargs={}, daemon=True)
+            target=monitor_old_server_process, kwargs={'process': process}, daemon=True)
     thread1.start()
     print('The OLD is being served at {}'.format(OLD_URL))
+    def stop_serving_old():
+        process.terminate()
+    return stop_serving_old
 
 
 class DativeHTTPHandler(SimpleHTTPRequestHandler):
@@ -461,20 +481,99 @@ class DativeHTTPHandler(SimpleHTTPRequestHandler):
         return translate_path(path, DATIVE_ROOT)
 
 
-def _serve_dative():
-    Handler = DativeHTTPHandler
-    httpd = socketserver.TCPServer((IP, DATIVE_PORT), Handler)
-    httpd.serve_forever()
+def _serve_dative(dative_server=None):
+    dative_server.serve_forever()
+
+
+class MyTCPServer(socketserver.TCPServer):
+    """This allows us to shutdown the Dative server immediately when the user
+    quits DativeTop. This avoids the TIME_WAIT issue. See
+    https://stackoverflow.com/questions/6380057/python-binding-socket-address-already-in-use/18858817#18858817
+    """
+
+    def server_bind(self):
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.socket.bind(self.server_address)
 
 
 def serve_dative():
+    dative_server = MyTCPServer((IP, DATIVE_PORT), DativeHTTPHandler)
     thread2 = threading.Thread(
-        target=_serve_dative, kwargs={}, daemon=True)
+        target=_serve_dative, kwargs={'dative_server': dative_server}, daemon=True)
     thread2.start()
     print('Dative is being served at {}'.format(DATIVE_URL))
+    def stop_serving_dative():
+        dative_server.shutdown()
+        dative_server.server_close()
+        thread2.join()
+    return stop_serving_dative
+
+
+def real_main():
+    stop_serving_dative = serve_dative()
+    stop_serving_old = serve_old()
+    launch_dativetop(stop_serving_dative, stop_serving_old)
+
+
+class Converter(toga.App):
+    def calculate(self, widget):
+        try:
+            self.c_input.value = (float(self.f_input.value) - 32.0) * 5.0 / 9.0
+        except Exception:
+            self.c_input.value = '???'
+
+    def startup(self):
+        # Create a main window with a name matching the app
+        self.main_window = toga.MainWindow(title=self.name)
+
+        # Create a main content box
+        f_box = toga.Box()
+        c_box = toga.Box()
+        box = toga.Box()
+
+        self.c_input = toga.TextInput(readonly=True)
+        self.f_input = toga.TextInput()
+
+        self.c_label = toga.Label('Celsius', style=Pack(text_align=LEFT))
+        self.f_label = toga.Label('Fahrenheit', style=Pack(text_align=LEFT))
+        self.join_label = toga.Label('Is equivalent to', style=Pack(text_align=RIGHT))
+
+        button = toga.Button('Calculate', on_press=self.calculate)
+
+        f_box.add(self.f_input)
+        f_box.add(self.f_label)
+
+        c_box.add(self.join_label)
+        c_box.add(self.c_input)
+        c_box.add(self.c_label)
+
+        box.add(f_box)
+        box.add(c_box)
+        box.add(button)
+
+        box.style.update(direction=COLUMN, padding_top=10)
+        f_box.style.update(direction=ROW, padding=5)
+        c_box.style.update(direction=ROW, padding=5)
+
+        self.c_input.style.update(flex=1)
+        self.f_input.style.update(flex=1, padding_left=160)
+        self.c_label.style.update(width=100, padding_left=10)
+        self.f_label.style.update(width=100, padding_left=10)
+        self.join_label.style.update(width=150, padding_right=10)
+
+        button.style.update(padding=15, flex=1)
+
+        # Add the content on the main window
+        self.main_window.content = box
+
+        # Show the main window
+        self.main_window.show()
+
+
+def demo_main():
+    return Converter('Converter', 'org.pybee.converter')
 
 
 def main():
-    serve_dative()
-    serve_old()
-    launch_dativetop()
+    #return demo_main()
+    return real_main()

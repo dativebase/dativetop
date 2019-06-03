@@ -6,6 +6,14 @@ DativeTop: `DativeBase`_ as a Desktop Application
 DativeBase as a *desktop* application. It is `Dative`_ and the `OLD`_ wrapped
 in a `Toga`_ and packaged into a `Briefcase`_.
 
+The ultimate goal is for DativeTop to be a desktop application with an icon
+that can be double-clicked and just starts up in the manner that is typical for
+the platform on which it is being run. DativeTop will save files to the user's
+filesystem and structured data to local SQLite files. DativeTop should have an
+interface that allows users to configure a local OLD as a subscribers to a
+specified OLD instances on the web. DativeTop will have logic for maintaining
+consistency with the server-side "leader" OLD.
+
 
 Install
 ================================================================================
@@ -22,8 +30,27 @@ in development mode or build the native binaries yourself using the
 instructions in the sections that follow.
 
 
-Install from Source
+Install from Source (for Developers)
 ================================================================================
+
+QuickStart
+--------------------------------------------------------------------------------
+
+For quick reference, here are the core development install commands. Use the
+detailed instructions below if this is your first time installing DativeTop
+from source::
+
+    $ python3 -m venv venv
+    $ source venv/bin/activate
+    $ git submodule update --init --recursive
+    $ make build-dative
+    $ make install
+    $ make create-old-instance OLD_NAME=myold
+    $ make launch
+
+
+Detailed Source Install
+--------------------------------------------------------------------------------
 
 First, Ensure that you have GNU Make installed by running ``make -v``. Then
 create and activate a Python 3.6 (or 3.5) virtual environment::
@@ -45,12 +72,30 @@ work; on a Mac ``brew install node`` should work.)::
 
     (venv) $ make build-dative
 
-Finally, install the `BeeWare`_ suite, the OLD's requirements, and the OLD
-itself in development mode::
+Install the `BeeWare`_ suite, the OLD's requirements, and the OLD
+itself in development mode using either the following make rule::
 
-    (venv) $ pip install beeware
-    (venv) $ pip install -r src/old/requirements/test.txt
+    (venv) $ make install
+
+or these separate ``pip install`` commands::
+
+    (venv) $ pip install -r requirements.txt
+    (venv) $ pip install -r src/old/requirements/testsqlite.txt
     (venv) $ pip install -e src/old/
+
+Create the filesystem structure and (SQLite) database for a local OLD named
+"myold"::
+
+    (venv) $ make create-old-instance OLD_NAME=myold
+
+The above command will create the OLD's SQLite file and its filesystem
+structure under ``./oldinstances/``:
+
+- SQLite database file: ``oldinstances/dbs/myold.sqlite``
+- OLD directory for saving, e.g., audio, files: ``oldinstances/myold/``
+
+The ``create-old-instance`` command also tells Dative that there is an OLD
+instance being served, in this case, at http://127.0.0.1:5679/myold/.
 
 You should now be able to launch DativeTop with the following command::
 
@@ -70,6 +115,9 @@ URLs:
 Troubleshooting
 --------------------------------------------------------------------------------
 
+Blank Screen
+````````````````````````````````````````````````````````````````````````````````
+
 If you launch DativeTop and see a blank screen, it may be that a previous
 DativeTop was not shut down correctly. Search for the offending process and
 kill it::
@@ -78,6 +126,22 @@ kill it::
     $ someuser       45469   0.0  0.1  4357248  10392 s014  S    10:58am   0:00.12 python -m dativetop
     $ kill 45469
     $ make launch
+
+
+Pillow (OLD dep) Won't Install
+````````````````````````````````````````````````````````````````````````````````
+
+If you run into trouble installing Pillow (an OLD dependency for image
+processing), then you might need to install libjpeg and zlib. See:
+
+- https://stackoverflow.com/questions/34631806/fail-during-installation-of-pillow-python-module-in-linux
+- https://github.com/python-pillow/Pillow/issues/3438
+
+On Mac OS 10.14 (Mojave), I had to install the zlib headers by manually
+installing the macOS SDK headers (YMMV)::
+
+    $ brew install libjpeg zlib
+    $ sudo installer -pkg /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
 
 
 Developer Hints

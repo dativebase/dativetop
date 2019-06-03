@@ -1,3 +1,22 @@
+"""Register a local OLD instance with a local Dative app.
+
+Example script usage to register an OLD named "myold" with the locally running
+Dative app::
+
+    $ DATIVETOP_OLD_PORT=5679 \
+          DATIVETOP_DATIVE_SERVERS=src/dative/dist/servers.json \
+          DATIVETOP_IP=127.0.0.1 \
+          python dativetop/scripts/register-old-with-dative.py create myold
+
+The above will add the following object to the JSON array in the local Dative
+app's "servers" JSON config file, which is here specified as
+src/dative/dist/servers.json using an environment variable::
+
+    [{"name": "myold",
+      "type": "OLD",
+      "url": "http://127.0.0.1:5679/myold",}]
+"""
+
 import json
 import os
 import sys
@@ -34,6 +53,8 @@ def _generate_old_dict(old_name):
 def create(old_name):
     servers = _get_dative_servers()
     old_dict = _generate_old_dict(old_name)
+    # TODO: maybe treat the name or the key as a primary key and update if
+    # there is a match based on that key.
     if old_dict in servers:
         return
     servers.append(old_dict)

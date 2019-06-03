@@ -3,12 +3,12 @@ import io
 import logging
 import os
 import re
+from setuptools import setup, find_packages
 import shlex
 import shutil
 import subprocess
 import sys
 
-from setuptools import setup, find_packages
 from briefcase.app import app
 
 
@@ -136,7 +136,6 @@ setup(
             'django'
         ]
     ),
-    python_requires='>=3.5',
     classifiers=[
         'Development Status :: 1 - Planning',
         'License :: OSI Approved :: Apache Software License',
@@ -145,42 +144,41 @@ setup(
         'app': {
             'formal_name': 'DativeTop',
             'bundle': 'org.dativebase',
-            'icon': 'dativetop/icons/OLDIcon'
         },
 
         # Desktop/laptop deployments
         'macos': {
             'app_requires': [
-                'toga-cocoa==0.3.0.dev9',
+                'toga-cocoa==0.3.0.dev11',
             ]
         },
         'linux': {
             'app_requires': [
-                'toga-gtk==0.3.0.dev9',
+                'toga-gtk==0.3.0.dev11',
             ]
         },
         'windows': {
             'app_requires': [
-                'toga-winforms==0.3.0.dev9',
+                'toga-winforms==0.3.0.dev11',
             ]
         },
 
         # Mobile deployments
         'ios': {
             'app_requires': [
-                'toga-ios==0.3.0.dev9',
+                'toga-ios==0.3.0.dev11',
             ]
         },
         'android': {
             'app_requires': [
-                'toga-android==0.3.0.dev9',
+                'toga-android==0.3.0.dev11',
             ]
         },
 
         # Web deployments
         'django': {
             'app_requires': [
-                'toga-django==0.3.0.dev9',
+                'toga-django==0.3.0.dev11',
             ]
         },
     }

@@ -46,7 +46,7 @@ register-old-with-dative:  ## Register the default OLD instance with Dative's li
 					   python dativetop/scripts/register-old-with-dative.py create ${DFLT_DATIVETOP_OLD_NAME}
 
 beeware-build-mac-os:  ## Build the DativeTop .app bundle for Mac OS
-	DFLT_DATIVETOP_OLD_NAME=${DFLT_DATIVETOP_OLD_NAME} python setup.py macos -v
+	DFLT_DATIVETOP_OLD_NAME=${DFLT_DATIVETOP_OLD_NAME} python setup.py macos -s
 
 build-mac-os: bootstrap-old register-old-with-dative beeware-build-mac-os  ## Build a DativeTop .app bundle for Mac OS
 
@@ -73,6 +73,11 @@ initialize-old:  # Create the default OLD instance's SQLite database and directo
 flush: flush-dative flush-old  ## Delete ALL user data
 
 bootstrap-old: flush-old initialize-old  ## Generate a new default OLD database and directory structure, deleting any previous ones
+
+install:
+	pip install -r requirements.txt && \
+		pip install -r src/old/requirements/testsqlite.txt && \
+		pip install -e src/old/
 
 help:  ## Print this help message.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

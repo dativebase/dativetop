@@ -10,8 +10,8 @@ The ultimate goal is for DativeTop to be a desktop application with an icon
 that can be double-clicked and just starts up in the manner that is typical for
 the platform on which it is being run. DativeTop will save files to the user's
 filesystem and structured data to local SQLite files. DativeTop should have an
-interface that allows users to configure a local OLD as a subscribers to a
-specified OLD instances on the web. DativeTop will have logic for maintaining
+interface that allows users to configure a local OLD as a subscriber to a
+specified OLD instance on the web. DativeTop will have logic for maintaining
 consistency with the server-side "leader" OLD.
 
 
@@ -197,7 +197,7 @@ To build a mountable disk image containing DativeTop.app (i.e., a DMG file)::
 
 
 Troubleshooting
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+````````````````````````````````````````````````````````````````````````````````
 
 If you double-click on DativeTop.app and the application does not work as
 expected, you can launch DativeTop manually such that any exceptions that are

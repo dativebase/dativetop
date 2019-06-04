@@ -148,6 +148,7 @@ setup(
 
         # Desktop/laptop deployments
         'macos': {
+            'icon': 'dativetop/icons/OLDIcon',
             'app_requires': [
                 'toga-cocoa==0.3.0.dev11',
             ]

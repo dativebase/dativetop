@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+README.html
+
 # OSX useful to ignore
 *.DS_Store
 .AppleDouble

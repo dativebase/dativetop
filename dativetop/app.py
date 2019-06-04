@@ -13,6 +13,7 @@ users.
 from http.server import SimpleHTTPRequestHandler
 import io
 import json
+import logging
 import os
 import posixpath
 import re
@@ -29,6 +30,11 @@ import pyperclip
 import toga
 from toga.style import Pack
 from toga.style.pack import COLUMN, ROW, LEFT, RIGHT
+
+
+logging.basicConfig(
+    filename='dativetop.log',
+    level=logging.INFO)
 
 
 HERE = os.path.dirname(os.path.dirname(__file__))
@@ -441,6 +447,7 @@ class DativeTop(toga.App):
 def fork_old_server_process():
     os.chdir(OLD_DIR)
     cmd = [
+        #'./../../../python/bin/pserve',  # TODO: this is needed in a built appj...
         'pserve',
         '--reload',
         'config.ini',
@@ -456,7 +463,7 @@ def monitor_old_server_process(process=None):
         if output == '' and process.poll() is not None:
             break
         if output:
-            print(output.decode('utf8').strip())
+            logging.info(output.decode('utf8').strip())
     rc = process.poll()
     return rc
 

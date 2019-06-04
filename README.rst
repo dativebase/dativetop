@@ -1,5 +1,5 @@
 ================================================================================
-DativeTop: `DativeBase`_ as a Desktop Application
+  DativeTop: `DativeBase`_ as a Desktop Application
 ================================================================================
 
 `DativeBase`_ is *web-based* software for linguistic fieldwork. DativeTop is

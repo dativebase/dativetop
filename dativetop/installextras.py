@@ -129,16 +129,16 @@ def copy_old_database(settings, old_pth):
 def install_old(app_dir):
     """Install the OLD's Python dependencies into the target app."""
     cmds = (
-        shlex.split(
-            'pip install'
-            ' --upgrade'
-            ' --force-reinstall'
-            ' --target={app_dir}'
-            ' -r src/old/requirements/testsqlite.txt'.format(app_dir=app_dir)),
-        shlex.split('python src/old/setup.py develop'),
+        (f'pip install'
+         f' --upgrade'
+         f' --force-reinstall'
+         f' --target={app_dir}'
+         f' -r src/old/requirements/testsqlite.txt'),
+        'python src/old/setup.py develop',
     )
     for cmd in cmds:
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        logger.info('Running command: ``%s``.', cmd)
+        p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE)
         while True:
             output = p.stdout.readline()
             if output == b'' and p.poll() is not None:
@@ -146,6 +146,7 @@ def install_old(app_dir):
             if output:
                 print(output.decode('utf8').strip())
         rc = p.poll()
+        logger.info('Command exited with status code %s.', rc)
     logger.info('Installed the OLD.')
 
 

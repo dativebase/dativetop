@@ -15,7 +15,6 @@ src/dative/dist/servers.json using an environment variable::
 """
 
 import json
-import os
 import sys
 
 from getsettings import get_settings

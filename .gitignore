@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+README.html
+
 # OSX useful to ignore
 *.DS_Store
 .AppleDouble
@@ -33,6 +35,7 @@ Temporary Items
 # Distribution / packaging
 .Python
 env/
+venv/
 build/
 develop-eggs/
 dist/
@@ -64,3 +67,9 @@ windows/
 android/
 linux/
 django/
+
+oldinstances/
+!dativetop/icons/
+docker-wine/
+docker-wix/
+winebin/

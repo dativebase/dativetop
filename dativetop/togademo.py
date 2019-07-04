@@ -62,4 +62,5 @@ class Converter(toga.App):
 
 
 def demo_main():
-    return Converter('Converter', 'org.pybee.converter')
+    app = Converter('Converter', 'org.pybee.converter')
+    app.main_loop()

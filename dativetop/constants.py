@@ -4,6 +4,7 @@ import os
 
 
 HERE = os.path.dirname(os.path.dirname(__file__))
+CONFIG_PATH = os.path.join(HERE, 'dativetop', 'config.json')
 
 APP_NAME = 'DativeTop'
 APP_ID = 'org.dativebase.dativetop'

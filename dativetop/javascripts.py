@@ -51,3 +51,19 @@ def paste_js(clipboard):
         f"var cursorPos = start + `{clipboard}`.length;\n"
         f"focused_ntv.setSelectionRange(cursorPos, cursorPos);"
     )
+
+
+DESTROY_DATIVE_APP_SETTINGS = (
+    "localStorage.removeItem('dativeApplicationSettings');"
+)
+
+
+GET_DATIVE_APP_SETTINGS = (
+    "var x = localStorage.getItem('dativeApplicationSettings');\n"
+    "x;"
+)
+
+
+SET_DATIVE_APP_SETTINGS = (
+    "localStorage.setItem('dativeApplicationSettings', '{dative_app_settings}');\n"
+)

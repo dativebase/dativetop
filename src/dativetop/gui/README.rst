@@ -26,3 +26,23 @@ Do the above two steps with Make and tmux::
 
     $ make run-repl
 
+
+Connect to Shadow-CLJS nREPL with Spacemacs and Cider
+================================================================================
+
+1. Start the app and connect to the REPL from the command line using the make
+   rule given above::
+
+       $ make run-repl
+
+   With the above, there should be an nREPL at localhost:8082.
+
+2. Navigate to DativeTop in a browser at http://127.0.0.1:8081/.
+
+3. In Spacemacs, run `C-m C-s C-c` and at the prompts select `localhost` and
+   `8082`.
+
+4. In Spacemacs, open the Cider REPL buffer; find it with `Space b b` and
+   execute the following::
+
+       shadow.user> (shadow.cljs.devtools.api/nrepl-select :dativetop-gui)

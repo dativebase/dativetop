@@ -12,7 +12,9 @@
                 [ns-tracker "0.3.0"]
                 [reagent "0.7.0"]
                 [re-com "2.5.0"]
-                [secretary "1.2.3"]]
+                [secretary "1.2.3"]
+                [cider/cider-nrepl "0.16.0-SNAPSHOT"]]
+ :nrepl {:port 8082}
  :dev-http {8080 "target/"}
  :builds {:dativetop-gui {:output-dir "target/"
                           :asset-path "."

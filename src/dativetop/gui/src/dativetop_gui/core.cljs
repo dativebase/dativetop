@@ -1,5 +1,8 @@
 (ns dativetop-gui.core
   (:require [reagent.core :as reagent]
+            [ajax.core :as ajax]
+            [clojure.pprint :as pprint]
+            [day8.re-frame.http-fx]
             [re-frame.core :as rf]
             [re-com.core
              :refer
@@ -11,12 +14,9 @@
             [goog.string :as gstring]
             [goog.string.format]))
 
-(def dative-url "http://127.0.0.1:5678/")
-
 (defn new-old-valid?
   [new-old]
-  false
-  )
+  false)
 
 (def col-widths
   {:name "7.5em"
@@ -26,39 +26,75 @@
    :auto-sync? "8em"
    :actions "7em"})
 
+(defn fetch-data
+  []
+  nil)
+
 ;; -- Domino 1 - Event Dispatch -----------------------------------------------
 
+(defn dispatch-poll-server-state-event [] (rf/dispatch [:poll-server-state]))
+
+(defonce poller (js/setInterval dispatch-poll-server-state-event 1000))
 
 ;; -- Domino 2 - Event Handlers -----------------------------------------------
 
+(def get-server-state-map
+  {:method :get
+   :headers {:Content-Type "application/json; utf8"}
+   :format :json
+   :uri "http://127.0.0.1:6543/"
+   :timeout 8000
+   :response-format (ajax/json-response-format {:keywords? true})})
+
+(rf/reg-event-fx
+ :initialize
+ (fn [{:keys [db]} _]
+   {:db db
+    :http-xhrio (-> get-server-state-map
+                    (assoc :on-success [:initialize-success])
+                    (assoc :on-failure [:initialize-failure]))}))
+
+(rf/reg-event-fx
+ :poll-server-state
+ (fn [{:keys [db]} _]
+   (if (:dirty? db)
+     {:db db}
+     {:db db
+      :http-xhrio (-> get-server-state-map
+                      (assoc :on-success [:poll-server-state-success])
+                      (assoc :on-failure [:poll-server-state-failure]))})))
+
+(def default-db
+  {:dative-url ""
+   :old-url ""
+   :new-old {:name ""
+             :short-name ""
+             :leader ""}
+   :old-instances {}
+   :server-state {}
+   :dirty? false})
+
 (rf/reg-event-db
-  :initialize
-  (fn [_ _]
-    {:dative-url "http://127.0.0.1:5678/"
-     :old-url "http://127.0.0.1:5679/"
-     :new-old
-     {:name ""
-      :short-name ""
-      :leader ""}
-     :old-instances
-     {"http://127.0.0.1:5679/bla"
-      {:name "Blackfoot"
-       :url "http://127.0.0.1:5679/bla"
-       :leader "https://projects.linguistics.ubc.ca/blaold"
-       :state :out-of-sync
-       :auto-sync? false}
-      "http://127.0.0.1:5679/oka"
-      {:name "Okanagan"
-       :url "http://127.0.0.1:5679/oka"
-       :leader nil
-       :state nil
-       :auto-sync? false}
-      "http://127.0.0.1:5679/sta"
-      {:name "St'at'imcets"
-       :url "http://127.0.0.1:5679/sta"
-       :leader "https://projects.linguistics.ubc.ca/staold"
-       :state :synced
-       :auto-sync? true}}}))
+ :initialize-success
+ (fn [db [_ r]]
+   (merge default-db r)))
+
+(rf/reg-event-db
+ :initialize-failure
+ (fn [db _]
+   default-db))
+
+(rf/reg-event-db
+ :poll-server-state-success
+ (fn [db [_ r]]
+   (if (:dirty? db)
+     (assoc db :server-state r)
+     (merge db r))))
+
+(rf/reg-event-db
+ :poll-server-state-failure
+ (fn [db _]
+   db))
 
 (rf/reg-event-db
   :new-old-create
@@ -77,9 +113,40 @@
     (assoc-in db [:new-old :name] new-name)))
 
 (rf/reg-event-db 
-  :auto-sync?-changed
+  :auto-sync?-changed-DEPRECATED
   (fn [db [_ old-url auto-sync?-val]]
-    (assoc-in db [:old-instances old-url :auto-sync?] auto-sync?-val)))
+    (assoc-in db [:old-instances (keyword old-url) :auto-sync?] auto-sync?-val)))
+
+(rf/reg-event-fx
+ :auto-sync?-changed
+ (fn [{:keys [db]} [_ old-url auto-sync?-val]]
+   (let [old-url-kw (keyword old-url)
+         current-oi (get-in db [:old-instances old-url-kw])
+         updated-oi (assoc current-oi :auto-sync? auto-sync?-val)]
+     {:db (assoc db :dirty? true)
+      :http-xhrio {:method :put
+                   :params updated-oi
+                   :timeout 5000
+                   :format (ajax/json-request-format)
+                   :headers {:Content-Type "application/json; utf8"}
+                   :uri "http://127.0.0.1:6543/"
+                   :response-format (ajax/json-response-format {:keywords? true})
+                   :on-success [:auto-sync?-change-success]
+                   :on-failure [:auto-sync?-change-failure]}})))
+
+(rf/reg-event-db
+ :auto-sync?-change-success
+ (fn [db [_ r]]
+   (println "auto-sync? changed on server")
+   (-> db
+       (assoc :dirty? false)
+       (merge r))))
+
+(rf/reg-event-db
+ :auto-sync?-change-failure
+ (fn [db _]
+   (println "auto-sync? FAILED to change on server")
+   (assoc db :dirty? false)))
 
 (rf/reg-event-db
   :new-old-short-name-change

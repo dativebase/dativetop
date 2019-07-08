@@ -39,7 +39,9 @@ def is_valid_old(updated_old):
     return True
 
 
-def update_old(request):
+def append_to_log(request):
+    """Add the sequence of appendables in the request to the append-only log."""
+
     try:
         updated_old = request.json_body
     except Exception as exc:
@@ -53,18 +55,26 @@ def update_old(request):
     return demo_data
 
 
-def data(request):
-    if request.method == 'PUT':
-        return update_old(request)
+def get_append_only_log(request):
     return demo_data
+
+
+def append_only_log(request):
+    if request.method == 'PUT':
+        return append_to_log(request)
+    if request.method == 'GET':
+        return get_append_only_log(request)
+    request.response.status = 405
+    return {'error': 'Only GET and PUT requests are permitted.'}
 
 
 if __name__ == '__main__':
     with Configurator() as config:
         config.include('cors')
         config.add_cors_preflight_handler()
-        config.add_route('data', '/')
-        config.add_view(data, route_name='data', renderer='json')
+        config.add_route('append-only-log', '/')
+        config.add_view(append_only_log, route_name='append-only-log',
+                       renderer='json')
         app = config.make_wsgi_app()
     server = make_server('127.0.0.1', 6543, app)
     server.serve_forever()

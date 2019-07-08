@@ -13,6 +13,17 @@ import string
 import pprint
 
 
+OLD_INSTANCE_TYPE = 'old-instance'
+DATIVE_APP_TYPE = 'dative-app'
+OLD_SERVICE_TYPE = 'old-service'
+
+ENTITY_TYPES = (
+    OLD_INSTANCE_TYPE,
+    DATIVE_APP_TYPE,
+    OLD_SERVICE_TYPE,
+)
+
+
 OLDInstance = namedtuple(
     'OLDInstance', (
         'slug',  # (str, unique among OLD instances at a given OLDService.url,
@@ -120,6 +131,19 @@ old_service_schema = {
         default='',
         validator=None,),
 }
+
+
+DOMAIN_ENTITIES_AND_ENTITY_TYPES = (
+    (DativeApp, DATIVE_APP_TYPE),
+    (OLDInstance, OLD_INSTANCE_TYPE),
+    (OLDService, OLD_SERVICE_TYPE),
+)
+
+DOMAIN_ENTITIES_TO_ENTITY_TYPES = {
+    a: b for a, b in DOMAIN_ENTITIES_AND_ENTITY_TYPES}
+
+ENTITY_TYPES_TO_DOMAIN_ENTITIES = {
+    b: a for a, b in DOMAIN_ENTITIES_AND_ENTITY_TYPES}
 
 
 def construct(namedtuple_, schema, **kwargs):

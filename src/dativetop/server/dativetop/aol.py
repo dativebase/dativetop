@@ -1,5 +1,17 @@
-"""Append-only Log: functionality for persisting domain entities as entities in
-an append-only log.
+"""Append-only Log
+
+Functionality for persisting domain objects as appendables entities in an
+append-only log.
+
+An appendable is a 3-tuple consisting of a "quad", that quad's hash, and that
+quad's "integrated" hash.
+
+A "quad" is an EAVT 4-tuple of strings consisting of:
+
+    1. an Entity: a UUID string,
+    2. an Attribute: a string,
+    3. an Value: a string,
+    4. an Time: an ISO-8601 string representing a UTC datetime.
 
 """
 
@@ -8,13 +20,24 @@ from datetime import datetime
 import hashlib
 import json
 import os
-import pprint
 from uuid import uuid4
 
-from dativetop.domain import (
-    construct_old_instance,
-    DOMAIN_ENTITIES_TO_ENTITY_TYPES,
-)
+
+Quad = namedtuple(
+    'Quad', (
+        'entity',
+        'attribute',
+        'value',
+        'time'))
+
+
+Appendable = namedtuple(
+    'Appendable', (
+        'quad',  # a 4-tuple
+        'hash',  # MD5 hash of JSON-serialized quad
+        'integrated_hash',  # hash of JSON.SERIALIZE(
+                            # (<PREV_APPENDABLE_INTEGRATED_HASH>, <HASH>))
+    ))
 
 
 def get_now():
@@ -49,20 +72,24 @@ def get_uuid():
     return str(uuid4())
 
 
-Quad = namedtuple(
-    'Quad', (
-        'entity',
-        'attribute',
-        'value',
-        'time'))
+HAS_ATTR = 'has'
+LACKS_ATTR = 'lacks'
+IS_A_ATTR = 'is-a'
+
+BEING_VAL = 'being'
+
+EXTANT_PRED = (HAS_ATTR, BEING_VAL)
+NON_EXISTENT_PRED = (LACKS_ATTR, BEING_VAL)
+
+BEING_PREDS = (EXTANT_PRED, NON_EXISTENT_PRED)
 
 
 def fiat_entity():
     """Return a quad that asserts the existence of a new entity."""
     return Quad(
         entity=get_uuid(),
-        attribute='has',
-        value='being',
+        attribute=HAS_ATTR,
+        value=BEING_VAL,
         time=get_now_str(),)
 
 
@@ -77,31 +104,37 @@ def fiat_attribute(entity_id, attribute, value):
         time=get_now_str(),)
 
 
+def domain_to_aol_attr_convert(quad_attr):
+    """Convert an attribute from the domain-level syntax (which should be a
+    valid Python name) to the AOL-level syntax.
+    """
+    if not quad_attr.startswith('is_'):
+        quad_attr = f'has_{quad_attr}'
+    return quad_attr.replace('_', '-')
+
+
+def aol_to_domain_attr_convert(quad_attr):
+    """Convert an attribute from the AOL-level syntax (which should be more
+    human-readable) to the domain-level syntax.
+    """
+    if quad_attr.startswith('has-'):
+        quad_attr = quad_attr[4:]
+    return quad_attr.replace('-', '_')
+
+
 def instance_to_quads(instance, instance_type):
-    """Given a namedtuple domain entity ``instance``, return a tuple of quads
-    (4-tuples) that would be sufficient to represent that domain entity in the
-    append-only log.
+    """Given a namedtuple domain entity ``instance`` of type ``instance_type``
+    (a string), return a tuple of quads (4-tuples) that would be sufficient to
+    represent that domain entity in the append-only log.
     """
     being_quad = fiat_entity()
-    entity_id = being_quad.entity
-    type_quad = fiat_attribute(entity_id, 'is_a', instance_type)
-    quads = [being_quad, type_quad]
-    for attr in instance._fields:
-        quad_attr = attr
-        if not quad_attr.startswith('is_'):
-            quad_attr = f'has_{quad_attr}'
-        quads.append(
-            fiat_attribute(entity_id, quad_attr, getattr(instance, attr)))
-    return tuple(quads)
-
-
-Appendable = namedtuple(
-    'Appendable', (
-        'quad',  # a 4-tuple
-        'hash',  # MD5 hash of JSON-serialized quad
-        'integrated_hash',  # hash of JSON.SERIALIZE(
-                            # (<PREV_APPENDABLE_INTEGRATED_HASH>, <HASH>))
-    ))
+    return tuple(
+        [being_quad,
+         fiat_attribute(being_quad.entity, IS_A_ATTR, instance_type)] +
+        [fiat_attribute(being_quad.entity,
+                        domain_to_aol_attr_convert(attr),
+                        getattr(instance, attr))
+         for attr in instance._fields])
 
 
 def get_tip_hash(aol):
@@ -200,3 +233,38 @@ def get_aol(file_path):
             aol.append(Appendable(*parse_json(line)))
     return aol
 
+
+def aol_to_domain_entities(aol, domain_constructors):
+    """Given an append-only log ``aol``, return a dict from domain entity types
+    (pluralized strings, e.g., 'old-instances') to sets of domain entity
+    namedtuples (e.g., ``OLDInstance(slug='oka', ...)``.)
+    """
+    ret = {f'{k}s': set() for k in domain_constructors}
+    entities = {}
+    for appendable in aol:
+        quad = appendable.quad
+        e, a, v, _ = quad
+        entities.setdefault(e, {})
+        if (a, v) in BEING_PREDS:
+            if a == HAS_ATTR:
+                entities[e]['_extant'] = True
+            else:
+                entities[e]['_extant'] = False
+        elif a == IS_A_ATTR:
+            entities[e]['_type'] = v
+        else:
+            a = aol_to_domain_attr_convert(a)
+            entities[e][a] = v
+    for dom_ent_dict in entities.values():
+        if not dom_ent_dict.get('_extant'):
+            continue
+        entity_type = dom_ent_dict.get('_type')
+        constructor = domain_constructors.get(entity_type)
+        if not constructor:
+            continue
+        domain_entity, err = constructor(**dom_ent_dict)
+        if err:
+            continue
+        key = f'{entity_type}s'
+        ret[key].add(domain_entity)
+    return ret

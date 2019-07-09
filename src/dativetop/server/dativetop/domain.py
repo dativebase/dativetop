@@ -1,28 +1,100 @@
 """Domain entities for DativeTop:
 
-Defines the following named tuples and corresponding constructor functions:
+Defines the following domain entities:
 
-- ``OLDInstance``, constructor: ``construct_old_instance``
-- ``DativeApp``, constructor: ``construct_dative_app``
-- ``OLDService``, constructor: ``construct_old_service``
+- OLD instance: an Online Linguistic Database instance.
+- Dative app: a Dative application, presumably running locally.
+- OLD service: an Online Linguistic Database service that might be serving OLD
+  instances.
+
+These domain entites are encoded as named tuples. Each has a constructor, which
+implements validation. See the ``CONSTRUCTORS`` dict which maps the canonical
+type names of the domain entities to their constructor functions, which return
+instances of the appropriate namedtuple on success.
+
+Named tuples antd their corresponding constructor functions:
+
+- namedtuple: ``OLDInstance``, constructor: ``construct_old_instance``
+- namedtuple: ``DativeApp``, constructor: ``construct_dative_app``
+- namedtuple: ``OLDService``, constructor: ``construct_old_service``
 
 """
 
 from collections import namedtuple
 import string
-import pprint
 
 
 OLD_INSTANCE_TYPE = 'old-instance'
 DATIVE_APP_TYPE = 'dative-app'
 OLD_SERVICE_TYPE = 'old-service'
 
-ENTITY_TYPES = (
-    OLD_INSTANCE_TYPE,
-    DATIVE_APP_TYPE,
-    OLD_SERVICE_TYPE,
+LICIT_SLUG_CHARACTERS = string.ascii_lowercase + string.digits
+SYNCED_STATE = 'synced'
+SYNCING_STATE = 'syncing'
+NOT_SYNCED_STATE = 'not synced'
+OLD_INSTANCE_STATES = (
+    SYNCED_STATE,
+    SYNCING_STATE,
+    NOT_SYNCED_STATE,
 )
 
+
+AttributeSchema = namedtuple('AttributeSchema', ('type', 'default', 'validator'))
+
+
+def construct(namedtuple_, schema, **kwargs):
+    """
+    Construct a new namedtuple using ``namedtuple_`` and the attribute/value
+    pairs in ``kwargs``. Use ``schema`` to validate the arguments. Return a
+    "maybe namedtuple_", i.e., a 2-tuple where the second element is None in
+    the happy path, but an error string in the failure case.
+    """
+    new_kwargs = {k: kwargs.get(k, schema[k].default) for
+                  k in namedtuple_._fields}
+    wrong_types = [
+        (f'Value "{v}" of type "{type(v)}" is not of expected type'
+         f' "{schema[k].type}" for attribute "{k}".') for
+        k, v in new_kwargs.items() if
+        not isinstance(v, schema[k].type)]
+    if wrong_types:
+        return None, ' '.join(sorted(wrong_types))
+    validators = {
+        k: schema[k].validator for
+        k, v in new_kwargs.items() if schema[k].validator}
+    validations = [
+        validator(new_kwargs[k]) for k, validator in validators.items()]
+    validation_failures = [err for _, err in validations if err]
+    if validation_failures:
+        return None, ' '.join(sorted(validation_failures))
+    return namedtuple_(**new_kwargs), None
+
+
+# ==============================================================================
+# Validators
+# ==============================================================================
+
+def slug_validator(potential_slug):
+    if not potential_slug:
+        return None, f'A slug cannot be an empty string'
+    sanitized_slug = ''.join(c for c in potential_slug if c in LICIT_SLUG_CHARACTERS)
+    if potential_slug == sanitized_slug:
+        return potential_slug, None
+    return (
+        None,
+        f'Slugs can only contain characters from this string:'
+        f' "{LICIT_SLUG_CHARACTERS}".')
+
+
+def state_validator(potential_state):
+    if potential_state in OLD_INSTANCE_STATES:
+        return potential_state, None
+    delim = '", "'
+    return None, f'State must be one of "{delim.join(OLD_INSTANCE_STATES)}".'
+
+
+# ==============================================================================
+# OLD Instance (domain entity)
+# ==============================================================================
 
 OLDInstance = namedtuple(
     'OLDInstance', (
@@ -39,42 +111,6 @@ OLDInstance = namedtuple(
                            # continuously and automatically keep this local
                            # OLDInstance in sync with its leader.)
     ))
-
-
-LICIT_SLUG_CHARACTERS = string.ascii_lowercase + string.digits
-
-
-def slug_validator(potential_slug):
-    if not potential_slug:
-        return None, f'A slug cannot be an empty string'
-    sanitized_slug = ''.join(c for c in potential_slug if c in LICIT_SLUG_CHARACTERS)
-    if potential_slug == sanitized_slug:
-        return potential_slug, None
-    return (
-        None,
-        f'Slugs can only contain characters from this string:'
-        f' "{LICIT_SLUG_CHARACTERS}".')
-
-
-SYNCED_STATE = 'synced'
-SYNCING_STATE = 'syncing'
-NOT_SYNCED_STATE = 'not synced'
-OLD_INSTANCE_STATES = (
-    SYNCED_STATE,
-    SYNCING_STATE,
-    NOT_SYNCED_STATE,
-)
-
-
-def state_validator(potential_state):
-    if potential_state in OLD_INSTANCE_STATES:
-        return potential_state, None
-    delim = '", "'
-    return None, f'State must be one of "{delim.join(OLD_INSTANCE_STATES)}".'
-
-
-AttributeSchema = namedtuple('AttributeSchema', ('type', 'default', 'validator'))
-
 
 old_instance_schema = {
     'slug': AttributeSchema(
@@ -103,6 +139,20 @@ old_instance_schema = {
         validator=None,),
 }
 
+def construct_old_instance(**kwargs):
+    """Construct an OLDInstance tuple given keyword arguments.
+
+    Uses defaults from ``old_instance_schema`` when no value is supplied.
+    Performs type-based and validator-based validation prior to construction of
+    the tuple. Always returns a "maybe OLDInstance" 2-tuple, where the second
+    element is an error string or None.
+    """
+    return construct(OLDInstance, old_instance_schema, **kwargs)
+
+
+# ==============================================================================
+# Dative App (domain entity)
+# ==============================================================================
 
 DativeApp = namedtuple(
     'DativeApp', (
@@ -117,6 +167,13 @@ dative_app_schema = {
         validator=None,),
 }
 
+def construct_dative_app(**kwargs):
+    return construct(DativeApp, dative_app_schema, **kwargs)
+
+
+# ==============================================================================
+# OLD Service (domain entity)
+# ==============================================================================
 
 OLDService = namedtuple(
     'OLDService', (
@@ -132,107 +189,16 @@ old_service_schema = {
         validator=None,),
 }
 
-
-DOMAIN_ENTITIES_AND_ENTITY_TYPES = (
-    (DativeApp, DATIVE_APP_TYPE),
-    (OLDInstance, OLD_INSTANCE_TYPE),
-    (OLDService, OLD_SERVICE_TYPE),
-)
-
-DOMAIN_ENTITIES_TO_ENTITY_TYPES = {
-    a: b for a, b in DOMAIN_ENTITIES_AND_ENTITY_TYPES}
-
-ENTITY_TYPES_TO_DOMAIN_ENTITIES = {
-    b: a for a, b in DOMAIN_ENTITIES_AND_ENTITY_TYPES}
-
-
-def construct(namedtuple_, schema, **kwargs):
-    new_kwargs = {k: kwargs.get(k, schema[k].default) for
-                  k in namedtuple_._fields}
-    wrong_types = [
-        (f'Value "{v}" of type "{type(v)}" is not of expected type'
-         f' "{schema[k].type}" for attribute "{k}".') for
-        k, v in new_kwargs.items() if
-        not isinstance(v, schema[k].type)]
-    if wrong_types:
-        return None, ' '.join(sorted(wrong_types))
-    validators = {
-        k: schema[k].validator for
-        k, v in new_kwargs.items() if schema[k].validator}
-    validations = [
-        validator(new_kwargs[k]) for k, validator in validators.items()]
-    validation_failures = [err for _, err in validations if err]
-    if validation_failures:
-        return None, ' '.join(sorted(validation_failures))
-    return namedtuple_(**new_kwargs), None
-
-
-def construct_old_instance(**kwargs):
-    """Construct an OLDInstance tuple given keyword arguments.
-
-    Uses defaults from ``old_instance_schema`` when no value is supplied.
-    Performs type-based and validator-based validation prior to construction of
-    the tuple. Always returns a "maybe OLDInstance" 2-tuple, where the second
-    element is an error string or None.
-    """
-    return construct(OLDInstance, old_instance_schema, **kwargs)
-
-
-def construct_dative_app(**kwargs):
-    return construct(DativeApp, dative_app_schema, **kwargs)
-
-
 def construct_old_service(**kwargs):
     return construct(OLDService, old_service_schema, **kwargs)
 
 
-if __name__ == '__main__':
+# ==============================================================================
+# Constructors
+# ==============================================================================
 
-    test_old_instance, err = construct_old_instance(
-        slug='oka',
-        name='Okanagan OLD',
-        url='http://127.0.0.1:5679/oka',
-        leader='',
-        state=NOT_SYNCED_STATE,
-        is_auto_syncing=False)
-    assert not err
-    pprint.pprint(test_old_instance)
-
-    test_old_instance, err = construct_old_instance(
-        slug='oka!',
-        name='Okanagan OLD',
-        url='http://127.0.0.1:5679/oka',
-        leader='',
-        state='some garbage',
-        is_auto_syncing=False)
-    assert err == (
-        'Slugs can only contain characters from this string: '
-        '"abcdefghijklmnopqrstuvwxyz0123456789". State must be one of "synced",'
-        ' "syncing", "not synced".')
-    print(err)
-
-    test_old_instance, err = construct_old_instance(
-        slug='oka',
-        name=2,
-        url='http://127.0.0.1:5679/oka',
-        leader='',
-        state='some garbage',
-        is_auto_syncing=None)
-    assert err == (
-        'Value "2" of type "<class \'int\'>" is not of expected type "<class'
-        ' \'str\'>" for attribute "name". Value "None" of type "<class \'NoneType\'>"'
-        ' is not of expected type "<class \'bool\'>" for attribute'
-        ' "is_auto_syncing".')
-    print(err)
-
-    test_dative_app, err = construct_dative_app(
-        url='http://127.0.0.1:5678/',)
-    assert not err
-    print(test_dative_app)
-
-    test_old_service, err = construct_old_service(
-        url=3.14159,)
-    assert err == (
-        'Value "3.14159" of type "<class \'float\'>" is not of expected type'
-        ' "<class \'str\'>" for attribute "url".')
-    print(err)
+CONSTRUCTORS = {
+    DATIVE_APP_TYPE: construct_dative_app,
+    OLD_INSTANCE_TYPE: construct_old_instance,
+    OLD_SERVICE_TYPE: construct_old_service,
+}

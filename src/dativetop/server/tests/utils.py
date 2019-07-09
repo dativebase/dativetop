@@ -16,7 +16,8 @@ for path in (TMP_PATH, RESOURCES_PATH):
         os.mkdir(path)
 
 
-Case = namedtuple('Case', 'sources, expected')
+ConstructOLDInstanceCase = namedtuple(
+    'ConstructOLDInstanceCase', 'kwargs, error')
 
 
 def generate_oi_quads():
@@ -55,12 +56,10 @@ def generate_test_aol():
         leader='',
         state=domain.NOT_SYNCED_STATE,
         is_auto_syncing=False)
-    old_instance_type = domain.DOMAIN_ENTITIES_TO_ENTITY_TYPES[
-        type(test_old_instance_1)]
     test_old_instance_1_quads = aol_mod.instance_to_quads(
-        test_old_instance_1, old_instance_type)
+        test_old_instance_1, domain.OLD_INSTANCE_TYPE)
     test_old_instance_2_quads = aol_mod.instance_to_quads(
-        test_old_instance_2, old_instance_type)
+        test_old_instance_2, domain.OLD_INSTANCE_TYPE)
     aol = []
     for quad in test_old_instance_1_quads + test_old_instance_2_quads:
         aol = aol_mod.append_to_aol(aol, quad)

@@ -1,3 +1,8 @@
+"""The DativeTop Server keeps
+"""
+
+import sys
+
 from wsgiref.simple_server import make_server
 from pyramid.config import Configurator
 from pyramid.request import Request
@@ -68,13 +73,30 @@ def append_only_log(request):
     return {'error': 'Only GET and PUT requests are permitted.'}
 
 
-if __name__ == '__main__':
-    with Configurator() as config:
-        config.include('cors')
-        config.add_cors_preflight_handler()
-        config.add_route('append-only-log', '/')
-        config.add_view(append_only_log, route_name='append-only-log',
-                       renderer='json')
-        app = config.make_wsgi_app()
-    server = make_server('127.0.0.1', 6543, app)
+def get_ip_port():
+    args = sys.argv
+    ip = '127.0.0.1'
+    port = 6543
+    if len(args) == 2:
+        port = args[1]
+    elif len(args) > 2:
+        ip, port = args[1:3]
+    return ip, int(port)
+
+
+def main(ip, port):
+    config = Configurator()
+    config.include('cors')
+    config.add_cors_preflight_handler()
+    config.add_route('append-only-log', '/')
+    config.add_view(append_only_log,
+                    route_name='append-only-log',
+                    renderer='json')
+    app = config.make_wsgi_app()
+    server = make_server(ip, port, app)
     server.serve_forever()
+
+
+if __name__ == '__main__':
+    ip, port = get_ip_port()
+    main(ip, port)

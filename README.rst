@@ -227,6 +227,25 @@ do your file upload from there. DativeTop makes this easy: click on the "Help"
 menu and then click "Visit Dative in Browser".
 
 
+Architecture
+================================================================================
+
+- DativeTop Toga App:
+
+  - minimal Toga native GUI components: WebViews, top-level menu items, icons
+  - starts and serves local servers for 4 other components: Dative GUI, OLD
+    Service, DativeTop Service, DativeTop GUI.
+
+- Dative GUI: interface to multiple OLD instances
+
+- OLD Service: serves OLD instances at local URLs
+
+- DativeTop GUI: interface to DativeTop Service
+
+- DativeTop Service: manages local OLD instances, syncs them to external
+  leaders, ...
+
+
 .. _`DativeTop cannot upload files`: https://github.com/dativebase/dativebase/issues/16
 .. _`DativeBase`: https://github.com/dativebase/dativebase
 .. _`Dative`: https://github.com/dativebase/dative

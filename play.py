@@ -1,8 +1,8 @@
 import pprint
 
-import dativetop.client.dativetop as client
+import dativetop.client as client
 import dativetop.constants as c
-import dativetop.client.domain as domain
+import dtaoldm.domain as domain
 import dativetop.getsettings as getsettings
 import dativetop.introspect as di
 

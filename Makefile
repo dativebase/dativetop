@@ -74,10 +74,12 @@ flush: flush-dative flush-old  ## Delete ALL user data
 
 bootstrap-old: flush-old initialize-old  ## Generate a new default OLD database and directory structure, deleting any previous ones
 
-install:
+install:  ## Install all of the required dependencies
 	pip install -r requirements.txt && \
 		pip install -r src/old/requirements/testsqlite.txt && \
-		pip install -e src/old/
+		pip install -e src/old/ && \
+		pip install -e src/dativetop/server/ && \
+		pip install requirements/wheels/dativetop_append_only_log_domain_model-0.0.1-py3-none-any.whl
 
 help:  ## Print this help message.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

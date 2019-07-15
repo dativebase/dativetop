@@ -1,8 +1,4 @@
-"""WARNING: DUPLICATE CODE FROM src/dativetop/server/dativetopserver/dativetopserver/domain !!!!
-
-DO NOT MODIFY!!!
-
-Domain entities for DativeTop:
+"""Domain entities for DativeTop:
 
 Defines the following domain entities:
 
@@ -206,4 +202,3 @@ CONSTRUCTORS = {
     OLD_INSTANCE_TYPE: construct_old_instance,
     OLD_SERVICE_TYPE: construct_old_service,
 }
-

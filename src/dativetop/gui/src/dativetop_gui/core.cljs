@@ -65,14 +65,14 @@
                       (assoc :on-failure [:poll-server-state-failure]))})))
 
 (def default-db
-  {:dative-url ""
-   :old-url ""
-   :new-old {:name ""
-             :short-name ""
-             :leader ""}
+  {:dative-url    ""
+   :old-url       ""
+   :new-old       {:name       ""
+                   :short-name ""
+                   :leader     ""}
    :old-instances {}
-   :server-state {}
-   :dirty? false})
+   :server-state  {}
+   :dirty?        false})
 
 (rf/reg-event-db
  :initialize-success

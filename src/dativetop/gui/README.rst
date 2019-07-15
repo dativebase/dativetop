@@ -16,11 +16,11 @@ Install dependencies and setup basic scaffolding::
 
 Run in development::
 
-    $ yarn shadow-cljs watch app
+    $ yarn shadow-cljs watch dativetop-app
 
 Open a CS REPL to the process::
 
-    $ yarn shadow-cljs cljs-repl app
+    $ yarn shadow-cljs cljs-repl dativetop-app
 
 Do the above two steps with Make and tmux::
 
@@ -39,8 +39,8 @@ Connect to Shadow-CLJS nREPL with Spacemacs and Cider
 
 2. Navigate to DativeTop in a browser at http://127.0.0.1:8081/.
 
-3. In Spacemacs, run `C-m C-s C-c` and at the prompts select `localhost` and
-   `8082`.
+3. In Spacemacs, run `C-m C-s C-c` (or `C-c M-c` ... what you want is
+   `cider-connect-cljs` and at the prompts select `localhost` and `8082`.
 
 4. In Spacemacs, open the Cider REPL buffer; find it with `Space b b` and
    execute the following::

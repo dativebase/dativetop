@@ -82,6 +82,7 @@ or these separate ``pip install`` commands::
     (venv) $ pip install -r requirements.txt
     (venv) $ pip install -r src/old/requirements/testsqlite.txt
     (venv) $ pip install -e src/old/
+    (venv) $ pip install -e src/dativetop/server/dativetopserver/
 
 Create the filesystem structure and (SQLite) database for a local OLD named
 "myold"::

@@ -1,6 +1,9 @@
-"""The DativeTop Server keeps
+"""The DativeTop Server keeps ...
 """
 
+import json
+import logging
+from logging.config import dictConfig
 import sys
 
 from wsgiref.simple_server import make_server
@@ -8,7 +11,34 @@ from pyramid.config import Configurator
 from pyramid.request import Request
 from pyramid.view import view_config
 
-import json
+import aol
+
+
+AOL_PATH = 'aol.txt'
+
+
+logging_config = dict(
+    version=1,
+    formatters={
+        'f': {'format':
+              '%(asctime)s %(name)-32s %(levelname)-8s %(message)s'}
+    },
+    handlers={
+        'h': {'class': 'logging.StreamHandler',
+              'formatter': 'f',
+              'level': logging.DEBUG}
+    },
+    root={
+        'handlers': ['h'],
+        'level': logging.DEBUG,
+    },
+)
+
+dictConfig(logging_config)
+
+
+logger = logging.getLogger(__name__)
+
 
 demo_data = {
     'dative-url': 'http://127.0.0.1:5678/',
@@ -61,10 +91,14 @@ def append_to_log(request):
 
 
 def get_append_only_log(request):
-    return demo_data
+    return aol.get_aol(AOL_PATH)
 
 
 def append_only_log(request):
+    """Handle all requests. There is only one endpoint, the AOL root endoint at
+    /. Only 2 HTTP methods are accepted: PUT and GET. PUT is for appending, GET
+    is for reading.
+    """
     if request.method == 'PUT':
         return append_to_log(request)
     if request.method == 'GET':
@@ -93,6 +127,7 @@ def main(ip, port):
                     route_name='append-only-log',
                     renderer='json')
     app = config.make_wsgi_app()
+    logger.info(f'Serving at http://{ip}:{port}/')
     server = make_server(ip, port, app)
     server.serve_forever()
 

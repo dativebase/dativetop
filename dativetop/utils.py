@@ -1,5 +1,6 @@
 import io
 import json
+import logging
 import os
 import re
 
@@ -8,6 +9,9 @@ from dativetop.constants import (
     HERE,
     OLD_DIR,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_dativetop_version():
@@ -21,11 +25,11 @@ def get_dativetop_version():
                 r"^__version__ = ['\"]([^'\"]*)['\"]", version_file.read(), re.M)
             if version_match:
                 return version_match.group(1)
-            print('Unable to find DativeTop version in {}'.format(
+            logger.warning('Unable to find DativeTop version in {}'.format(
                 version_file_path))
             return 'unknown'
     except Exception:
-        print('Unable to find DativeTop version in {}'.format(version_file_path))
+        logger.warning('Unable to find DativeTop version in {}'.format(version_file_path))
         return 'unknown'
 
 
@@ -39,7 +43,7 @@ def get_dative_version():
             dative_pkj_json = json.load(filei)
         return dative_pkj_json['version']
     except Exception:
-        print('Unable to find Dative package.json at {}'.format(dative_pkg_path))
+        logger.warning('Unable to find Dative package.json at {}'.format(dative_pkg_path))
         return 'unknown'
 
 
@@ -57,7 +61,7 @@ def get_old_version():
                     return version_match.group(1)
                 raise RuntimeError("Unable to find OLD version string.")
         except Exception:
-            print('Unable to find OLD setup.py at {}'.format(old_setup_path))
+            logger.warning('Unable to find OLD setup.py at {}'.format(old_setup_path))
             return 'unknown'
     elif os.path.isfile(old_info_path):
         try:
@@ -68,9 +72,9 @@ def get_old_version():
                     return version_match.group(1)
                 raise RuntimeError("Unable to find OLD version string.")
         except Exception:
-            print('Unable to find OLD info.py at {}'.format(old_info_path))
+            logger.warning('Unable to find OLD info.py at {}'.format(old_info_path))
             return 'unknown'
     else:
-        print('Neither of these files exist so unable to get OLD version: {}'
+        logger.warning('Neither of these files exist so unable to get OLD version: {}'
               ' {}'.format(old_setup_path, old_info_path))
         return 'unknown'

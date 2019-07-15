@@ -5,6 +5,4 @@
 
   (* 8 8)
 
-  (js/console.log "hello joel")
-
 )

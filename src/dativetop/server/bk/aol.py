@@ -227,6 +227,8 @@ def get_aol(file_path):
     """Read the append-only-log stored on disk at ``file_path`` to a list of
     Appendable instances.
     """
+    if not os.path.isfile(file_path):
+        persist_aol([], file_path)
     aol = []
     with open(file_path, 'r') as fh:
         for line in fh:

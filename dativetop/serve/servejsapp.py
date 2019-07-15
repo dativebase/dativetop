@@ -5,11 +5,15 @@ a Python server.
 """
 
 from http.server import SimpleHTTPRequestHandler
+import logging
 import os
 import socket
 import socketserver
 import threading
 import urllib.parse
+
+
+logger = logging.getLogger(__name__)
 
 
 def _translate_path(path, root):
@@ -37,7 +41,7 @@ def _translate_path(path, root):
     return path
 
 
-def get_custom_http_handler(root_path):
+def get_custom_http_handler(name, root_path):
     """Return a subclass of ``SimpleHTTPRequestHandler`` that always serves
     paths relative to ``root_path`` instead of using ``os.getcwd()``.
     """
@@ -46,6 +50,16 @@ def get_custom_http_handler(root_path):
 
         def translate_path(self, path):
             return _translate_path(path, root_path)
+
+        def log_message(self, format, *args):
+            """Log message, e.g., to JS App named 'Dative', using the DativeTop
+            logger, wrapped as follows::
+
+                ('2019-07-14 12:15:55,397 dativetop.serve.servejsapp       INFO'
+                 ' Dative JS App: <MSG>')
+
+            """
+            logger.info('%s JS App: ' + format, *((name,) + args))
 
     return CustomHTTPHandler
 
@@ -71,14 +85,14 @@ def serve_local_js_app(name, ip, port, url, root_path):
     Return an argument-less func that, when called, will stop the local server
     and close the thread.
     """
-    OurCustomHTTPHandler =  get_custom_http_handler(root_path)
+    OurCustomHTTPHandler =  get_custom_http_handler(name, root_path)
     our_server = CustomTCPServer((ip, port), OurCustomHTTPHandler)
     thread = threading.Thread(
         target=_serve_local_js_app,
         kwargs={'our_server': our_server},
         daemon=True)
     thread.start()
-    print('{} is being served at {}'.format(name, url))
+    logger.info('{} is being served at {}'.format(name, url))
     def stop_our_server():
         our_server.shutdown()
         our_server.server_close()

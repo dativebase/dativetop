@@ -49,10 +49,11 @@ from dativetop.javascripts import (
     SELECT_ALL_JS,
     paste_js,
 )
-from dativetop.servedative import serve_dative
-from dativetop.servedativetopgui import serve_dativetop_gui
-from dativetop.servedativetopserver import serve_dativetop_server
-from dativetop.serveold import serve_old
+import dativetop.logging
+from dativetop.serve import serve_dative
+from dativetop.serve import serve_dativetop_gui
+from dativetop.serve import serve_dativetop_server
+from dativetop.serve import serve_old
 from dativetop.utils import (
     get_dativetop_version,
     get_dative_version,
@@ -60,9 +61,7 @@ from dativetop.utils import (
 )
 
 
-logging.basicConfig(
-    filename='dativetop.log',
-    level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 # TODO: stop doing this: ...
@@ -225,14 +224,14 @@ class DativeTop(toga.App):
         self.main_window.content = self.dative_gui
         to_eval = SET_DATIVE_APP_SETTINGS.format(
             dative_app_settings=json.dumps(dative_app_settings_dict))
-        print('EVAL THIS!:')
-        print(to_eval)
+        logger.debug('EVAL THIS!:')
+        logger.debug(to_eval)
         x = self.dative_gui.evaluate(to_eval)
-        print('ret val:')
-        print(x)
+        logger.debug('ret val:')
+        logger.debug(x)
         self.main_window.content = y
-        print('\n\n\nDative app settings now')
-        pprint.pprint(len(self.really_get_dative_app_settings()['servers']))
+        logger.debug('\n\n\nDative app settings now')
+        logger.debug(pprint.pformat(len(self.really_get_dative_app_settings()['servers'])))
 
     def paste_cmd(self, sender):
         self.dative_gui.evaluate(paste_js(pyperclip.paste().replace('`', r'\`')))

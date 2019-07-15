@@ -23,7 +23,7 @@ DATIVETOP_GUI_ROOT = os.path.join(HERE, 'src', 'dativetop', 'gui', 'target')
 DATIVETOP_GUI_URL = 'http://{}:{}/'.format(IP, DATIVETOP_GUI_PORT)
 
 DATIVETOP_SERVER_PORT = 5676
-DATIVETOP_SERVER_DIR = os.path.join(HERE, 'src', 'dativetop', 'server', 'dativetop')
+DATIVETOP_SERVER_DIR = os.path.join(HERE, 'src', 'dativetop', 'server', 'dativetopserver')
 DATIVETOP_SERVER_URL = 'http://{}:{}/'.format(IP, DATIVETOP_SERVER_PORT)
 
 OLD_DIR = os.path.join(HERE, 'src', 'old')

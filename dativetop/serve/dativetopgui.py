@@ -4,7 +4,7 @@ Functionality for serving the Dative ClojureScript SPA locally, in a separate
 thread, using a Python server.
 """
 
-from dativetop.servejsapp import serve_local_js_app
+from dativetop.serve.servejsapp import serve_local_js_app
 from dativetop.constants import (
     IP,
     DATIVETOP_GUI_PORT,

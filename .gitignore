@@ -81,3 +81,5 @@ src/dativetop/shadow-re-frame/
 src/dativetop/minimal-shadow-cljs-browser/
 src/dativetop/gui/target/
 .nrepl-port
+.coveragerc
+aol.txt

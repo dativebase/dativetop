@@ -2,6 +2,13 @@
   DativeTop: `DativeBase`_ as a Desktop Application
 ================================================================================
 
+DativeTop local services URLs:
+
+- http://127.0.0.1:5678/
+- http://127.0.0.1:5677/
+- http://127.0.0.1:5676/
+- http://127.0.0.1:5679/
+
 `DativeBase`_ is *web-based* software for linguistic fieldwork. DativeTop is
 DativeBase as a *desktop* application. It is `Dative`_ and the `OLD`_ wrapped
 in a `Toga`_ and packaged into a `Briefcase`_.

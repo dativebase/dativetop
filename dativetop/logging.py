@@ -10,11 +10,11 @@ logging_config = dict(
     handlers={
         'h': {'class': 'logging.StreamHandler',
               'formatter': 'f',
-              'level': logging.DEBUG}
+              'level': logging.INFO}
     },
     root={
         'handlers': ['h'],
-        'level': logging.DEBUG,
+        'level': logging.INFO,
     },
 )
 

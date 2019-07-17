@@ -27,7 +27,9 @@ def _fork_server_process(ip, port, root_path, config='config.ini'):
         f' http_host={ip}')
     # FIXME: this is still needed in a built (e.g., DativeTop.app) app...
     # './../../../python/bin/pserve'
-    return subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    return subprocess.Popen(cmd,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
 
 
 def _monitor_server_process(process=None, name=None):
@@ -55,7 +57,9 @@ def serve_pyr(name, ip, port, url, root_path, config='config.ini'):
         kwargs={'process': process, 'name': name,},
         daemon=True)
     thread.start()
-    logger.info('%s is being served at %s', name, url)
+    logger.info('%s should be being served at %s', name, url)
     def stop_serving():
+        logger.info('Shutting down %s at %s.', name, url)
         process.terminate()
+        logger.info('%s at %s should be shut down.', name, url)
     return stop_serving

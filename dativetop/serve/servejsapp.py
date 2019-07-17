@@ -92,9 +92,11 @@ def serve_local_js_app(name, ip, port, url, root_path):
         kwargs={'our_server': our_server},
         daemon=True)
     thread.start()
-    logger.info('{} is being served at {}'.format(name, url))
+    logger.info('{} should be being served at {}'.format(name, url))
     def stop_our_server():
+        logger.info('Shutting down %s at %s.', name, url)
         our_server.shutdown()
         our_server.server_close()
         thread.join()
+        logger.info('%s at %s should be shut down.', name, url)
     return stop_our_server

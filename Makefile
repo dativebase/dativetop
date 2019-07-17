@@ -37,7 +37,7 @@ build-dative:  ## Build Dative: install NPM dependencies, compile/minify JS and 
 		echo "[]" > ${DATIVETOP_DATIVE_SERVERS_REL}
 
 launch:  ## Launch DativeTop in development mode
-	python -m dativetop
+	@python -m dativetop
 
 register-old-with-dative:  ## Register the default OLD instance with Dative's list of known servers
 	DATIVETOP_OLD_PORT=${DATIVETOP_OLD_PORT} \

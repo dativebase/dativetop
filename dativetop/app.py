@@ -32,6 +32,7 @@ from toga.style.pack import COLUMN, ROW, CENTER, LEFT, RIGHT
 
 import dativetop.logging
 import dativetop.constants as c
+import dativetop.communicate as dtc
 from dativetop.getsettings import get_settings
 import dativetop.introspect as dti
 import dativetop.javascripts as dtjs
@@ -80,9 +81,16 @@ def _verify_services(dativetop_app=None, dativetop_settings=None):
         logger.error(msg)
         dativetop_app.fatal_error = msg
         dativetop_app.quit_cmd(None)
-    else:
-        logger.info('got domain_entities:')
-        logger.info(domain_entities)
+        return
+    logger.info('got domain_entities:')
+    logger.info(domain_entities)
+    success, err = dtc.communicate(domain_entities)
+    if err:
+        logger.warning(
+            'Failed to communicate the known local domain entities (e.g.,'
+            ' running OLD instances to the DativeTop Server process. Error:'
+            ' %s.', err)
+    logger.info(success)
 
 
 class DativeTop(toga.App):

@@ -1,3 +1,10 @@
+"""Code for introspecting the running services:
+
+    - Check that Dative GUI, DativeTop GUI, DativeTop Server and OLD Service
+      are all running.
+    - Return a list of OLD Instances that we can log in to.
+"""
+
 import logging
 import os
 import time
@@ -14,6 +21,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_URLS = (('Dative', c.DATIVE_URL),
                 ('DativeTop GUI', c.DATIVETOP_GUI_URL),
                 ('DativeTop Server', c.DATIVETOP_SERVER_URL),
+                # OLD needs a subpath under /
                 ('OLD Service', f'{c.OLD_URL}root/'),)
 
 MAX_ATTEMPTS = 3
@@ -43,6 +51,12 @@ def _find_possible_old_instance_names(dativetop_settings):
 def _determine_running_old_instances(dativetop_settings):
     """Return a list of dicts representing the OLD instances that are actually
     running locally.
+
+    .. warning:: We accomplish this verification by logging into each OLD
+                 serially. Aside from the possible performance issue of serial
+                 HTTP requests, this skirts the issue that some OLD instances
+                 might have modified credentials. Credential management must be
+                 dealt with.
     """
     ret = []
     username = dativetop_settings['dflt_old_username']
@@ -68,8 +82,8 @@ def _get_domain_entities(dativetop_settings):
     information that will need to be communicated to the DativeTop Server.
     """
     return {
-        'dative_app': {'url': ''},
-        'old_service': {'url': ''},
+        'dative_app': {'url': c.DATIVE_URL},
+        'old_service': {'url': c.OLD_URL},
         'old_instances': _determine_running_old_instances(dativetop_settings)}
 
 

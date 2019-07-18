@@ -48,7 +48,7 @@ def append_to_log(request):
     logger.info('Appending to the AOL')
     try:
         payload = request.json_body
-    except Exception as exc:
+    except json.decoder.JSONDecodeError:
         logger.exception(
             'Exception raised when attempting to get JSON from the request'
             ' body.')

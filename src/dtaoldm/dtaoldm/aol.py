@@ -270,3 +270,11 @@ def aol_to_domain_entities(aol, domain_constructors):
         key = f'{entity_type}s'
         ret[key].add(domain_entity)
     return ret
+
+
+def aol_to_json(aol):
+    return json.dumps(aol)
+
+
+def json_to_aol(json_aol):
+    return [Appendable(Quad(*q), h, ih) for q, h, ih in json.loads(json_aol)]

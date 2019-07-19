@@ -23,6 +23,8 @@ Named tuples antd their corresponding constructor functions:
 from collections import namedtuple
 import string
 
+import dtaoldm.utils as u
+
 
 OLD_INSTANCE_TYPE = 'old-instance'
 DATIVE_APP_TYPE = 'dative-app'
@@ -41,6 +43,11 @@ OLD_INSTANCE_STATES = (
 
 AttributeSchema = namedtuple('AttributeSchema', ('type', 'default', 'validator'))
 
+ID_SCHEMA = AttributeSchema(
+    type=str,
+    default=u.get_uuid,
+    validator=None,)
+
 
 def construct(namedtuple_, schema, **kwargs):
     """
@@ -49,8 +56,12 @@ def construct(namedtuple_, schema, **kwargs):
     "maybe namedtuple_", i.e., a 2-tuple where the second element is None in
     the happy path, but an error string in the failure case.
     """
-    new_kwargs = {k: kwargs.get(k, schema[k].default) for
-                  k in namedtuple_._fields}
+    new_kwargs = {}
+    for k in namedtuple_._fields:
+        v = kwargs.get(k, schema[k].default)
+        if callable(v):
+            v = v()
+        new_kwargs[k] = v
     wrong_types = [
         (f'Value "{v}" of type "{type(v)}" is not of expected type'
          f' "{schema[k].type}" for attribute "{k}".') for
@@ -98,6 +109,7 @@ def state_validator(potential_state):
 
 OLDInstance = namedtuple(
     'OLDInstance', (
+        'id',  # (str, UUID)
         'slug',  # (str, unique among OLD instances at a given OLDService.url,
                  # e.g., "oka")
         'name',  # (str, human readable name, e.g., "Okanagan")
@@ -113,6 +125,7 @@ OLDInstance = namedtuple(
     ))
 
 old_instance_schema = {
+    'id': ID_SCHEMA,
     'slug': AttributeSchema(
         type=str,
         default='',
@@ -156,11 +169,13 @@ def construct_old_instance(**kwargs):
 
 DativeApp = namedtuple(
     'DativeApp', (
+        'id',  # (str, UUID)
         'url',  # (str, URL, the local URL where the DativeApp is being served)
     ))
 
 
 dative_app_schema = {
+    'id': ID_SCHEMA,
     'url': AttributeSchema(
         type=str,
         default='',
@@ -177,12 +192,14 @@ def construct_dative_app(**kwargs):
 
 OLDService = namedtuple(
     'OLDService', (
+        'id',  # (str, UUID)
         'url',  # (str, URL, the local URL where the OLD service is being
                 # served)
     ))
 
 
 old_service_schema = {
+    'id': ID_SCHEMA,
     'url': AttributeSchema(
         type=str,
         default='',

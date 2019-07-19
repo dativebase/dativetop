@@ -22,6 +22,8 @@ import json
 import os
 from uuid import uuid4
 
+import dtaoldm.utils as u
+
 
 Quad = namedtuple(
     'Quad', (
@@ -68,10 +70,6 @@ def get_hash_of_quad(quad):
     return get_hash(serialize_quad(quad))
 
 
-def get_uuid():
-    return str(uuid4())
-
-
 HAS_ATTR = 'has'
 LACKS_ATTR = 'lacks'
 IS_A_ATTR = 'is-a'
@@ -84,10 +82,11 @@ NON_EXISTENT_PRED = (LACKS_ATTR, BEING_VAL)
 BEING_PREDS = (EXTANT_PRED, NON_EXISTENT_PRED)
 
 
-def fiat_entity():
+def fiat_entity(entity_id=None):
     """Return a quad that asserts the existence of a new entity."""
+    entity_id = entity_id or u.get_uuid()
     return Quad(
-        entity=get_uuid(),
+        entity=entity_id,
         attribute=HAS_ATTR,
         value=BEING_VAL,
         time=get_now_str(),)
@@ -127,7 +126,7 @@ def instance_to_quads(instance, instance_type):
     (a string), return a tuple of quads (4-tuples) that would be sufficient to
     represent that domain entity in the append-only log.
     """
-    being_quad = fiat_entity()
+    being_quad = fiat_entity(instance.id)
     return tuple(
         [being_quad,
          fiat_attribute(being_quad.entity, IS_A_ATTR, instance_type)] +
@@ -147,7 +146,7 @@ def get_tip_hash(aol):
     except IndexError:
         return None
     else:
-        return Appendable(*top_appendable).integrated_hash
+        return top_appendable.integrated_hash
 
 
 def serialize_appendable(appendable):

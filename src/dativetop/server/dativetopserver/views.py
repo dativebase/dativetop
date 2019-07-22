@@ -9,7 +9,8 @@ from pyramid.config import Configurator
 from pyramid.request import Request
 from pyramid.view import view_config
 
-import dativetopserver.aol as aol
+# import dativetopserver.aol as aol
+import dtaoldm.aol as aol
 
 
 AOL_PATH = 'aol.txt'
@@ -38,11 +39,6 @@ dictConfig(logging_config)
 logger = logging.getLogger(__name__)
 
 
-def is_valid_old(updated_old):
-    print(updated_old)
-    return True
-
-
 def append_to_log(request):
     """Add the sequence of appendables in the request to the append-only log."""
     logger.info('Appending to the AOL')
@@ -54,12 +50,17 @@ def append_to_log(request):
             ' body.')
         request.response.status = 400
         return {'error': 'Bad JSON in request body'}
-    if not is_valid_old(payload):
+    mergee = aol.list_to_aol(payload)
+    target = aol.get_aol(AOL_PATH)
+    merged, err = aol.merge_aols(
+        target, mergee, conflict_resolution_strategy='rebase')
+    if err:
         request.response.status = 400
-        return {'error': 'The data provided in the PUT request was not valid.'}
-    logger.info('payload')
-    logger.info(pprint.pformat(payload))
-    return aol.get_aol(AOL_PATH)
+        return {'error': err}
+    aol.persist_aol(merged, AOL_PATH)
+    # What we want to return here is the AOL that the sender does not know
+    # about ... the patch. See ongoing work at dtaoldm/aol.py.
+    return []
 
 
 def get_append_only_log(request):

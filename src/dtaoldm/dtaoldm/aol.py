@@ -20,6 +20,7 @@ from datetime import datetime
 import hashlib
 import json
 import os
+import pprint
 from uuid import uuid4
 
 import dtaoldm.utils as u
@@ -275,5 +276,142 @@ def aol_to_json(aol):
     return json.dumps(aol)
 
 
+def list_to_aol(aol_list):
+    return [Appendable(Quad(*q), h, ih) for q, h, ih in aol_list]
+
+
 def json_to_aol(json_aol):
-    return [Appendable(Quad(*q), h, ih) for q, h, ih in json.loads(json_aol)]
+    return list_to_aol(json.loads(json_aol))
+
+
+# ==============================================================================
+# Merge Functionality
+# ==============================================================================
+
+def find_changes(target, mergee):
+    """Find changes, i.e., the suffix of mergee that is not in target.
+
+    What: return the suffix of mergee that is not in target.
+    How: reverse pairwise iteration.
+    Logical possibilities:
+
+    1. No change
+       target:   a => b => c
+       mergee:   a => b => c
+       changes:
+
+    2. No conflict, new l
+       target:   a => b => c => X
+       mergee:   a => b => c
+       changes:
+
+    3. No conflict, new f
+       target:   a => b => c
+       mergee:   a => b => c => d
+       changes:              => d
+
+    4. Conflict A, equal new
+       target:   a => b => c => X
+       mergee:   a => b => c => d
+       changes:              => d
+
+    5. Conflict B, more target new
+       target:   a => b => c => X => Y
+       mergee:   a => b => c => d
+       changes:              => d
+
+    6. Conflict C, more mergee new
+       target:   a => b => c => X
+       mergee:   a => b => c => d => e
+       changes:              => d => e
+
+    .. warning:: This should maybe better be a shell out to Git ... but it's fun
+
+    """
+    if not target:  # target is empty, all of mergee is new
+        return mergee
+    target_seen = []  # suffix of target hashes seen
+    mergee_seen = []  # suffix of mergee hashes seen (2-tuples with indices)
+    for i, (l, f) in enumerate(zip(reversed(target), reversed(mergee))):
+        target_hash = l.integrated_hash
+        mergee_hash = f.integrated_hash
+        if (target_hash == mergee_hash or  # (1, 4)
+                mergee_hash in target_seen):  # (3, 6)
+            return mergee[len(mergee)-i:]
+        target_seen.append(target_hash)
+        for oth_foll_hash, oth_foll_idx in reversed(mergee_seen):
+            if oth_foll_hash in target_seen:
+                return mergee[len(mergee)-oth_foll_idx:] # (2, 5)
+        mergee_seen.append((mergee_hash, i))
+    return mergee
+
+
+def get_hashes(aol):
+    return [a.integrated_hash for a in aol]
+
+
+NEED_REBASE_ERR = ('There are changes in the target AOL that are not present'
+                   ' in the mergee AOL. Please manually rebase the mergee\'s'
+                   ' changes or try again with the "rebase" conflict'
+                   ' resolution strategy.')
+
+
+def merge_aols(target, mergee, conflict_resolution_strategy='abort',
+               diff_only=False):
+    """Merge AOL ``mergee`` into AOL ``target``.
+
+    :param list target: the AOL that will receive the changes.
+    :param list mergee: the AOL that will be merged into target; the AOL that
+      provides the changes.
+    :param str conflict_resolution_strategy: describes how to handle conflicts.
+      If the strategy is 'rebase', we will append the new quads from mergee
+      onto target, despite the fact that this will result in hashes for those
+      appended quads that differ from their input hashes in ``mergee``.
+    :param bool diff_only: If True, we only return the suffix of the merged
+      result that ``mergee`` would need to append to itself in order to become
+      identical with ``target``; if False, we return the entire modified
+      ``target``.
+    :returns: Always returns a 2-tuple maybe-type structure.
+
+    .. warning:: TODO: this should return a "patch". That is, instead of just
+                 returning an AOL, it should return a 2-tuple where the first
+                 element is the AOL and the second element is the hash in the
+                 ``mergee`` AOL where the patch should be applied.
+    """
+    new_from_mergee = find_changes(target, mergee)
+    if not new_from_mergee:
+        if diff_only:
+            return find_changes(mergee, target), None
+        return target, None
+    new_from_target = find_changes(mergee, target)
+    if new_from_target:
+        if conflict_resolution_strategy != 'rebase':
+            return None, NEED_REBASE_ERR
+    ret = target
+    if diff_only:
+        ret = new_from_target
+        if not ret:
+            return ret, None
+    for appendable in new_from_mergee:
+        append_to_aol(ret, appendable.quad)
+    return ret, None
+
+
+def diff(init_inst, new_inst, instance_type):
+    """Return the list of quads needed to make ``init_inst`` identical to
+    ``new_inst``. Both instances must be of type ``instance_type`` (a string).
+    """
+    if not isinstance(init_inst, type(new_inst)):
+        return None, 'Diff requires that both instances be of the same type.'
+    init_quads = instance_to_quads(init_inst, instance_type)
+    new_quads = instance_to_quads(new_inst, instance_type)
+    diff_quads = []
+    for nq in new_quads:
+        matches = [q for q in init_quads if q.attribute == nq.attribute]
+        if matches:
+            match = matches[0]
+            if match.value != nq.value:  # updated quad
+                diff_quads.append(nq)
+        else:  # new quad; should not really be possible given record type (namedtuple)
+            diff_quads.append(nq)
+    return diff_quads

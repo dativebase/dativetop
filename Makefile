@@ -81,6 +81,13 @@ install:  ## Install all of the required dependencies
 		pip install -e src/dativetop/server/ && \
 		pip install requirements/wheels/dativetop_append_only_log_domain_model-0.0.1-py3-none-any.whl
 
+dashboard:  ## Open tmux panes prepped to pilot DativeTop and its services
+	tmux new-session \; \
+		send-keys 'source venv/bin/activate' C-m \; \
+		send-keys 'make launch' C-m \; \
+		split-window -h \; \
+		split-window -v \;
+
 help:  ## Print this help message.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 

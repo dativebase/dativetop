@@ -21,7 +21,6 @@ import hashlib
 import json
 import os
 import pprint
-from uuid import uuid4
 
 import dtaoldm.utils as u
 
@@ -51,20 +50,20 @@ def get_now_str():
     return get_now().isoformat()
 
 
-def get_json(thing):
-    return json.dumps(thing)
+def get_json(data):
+    return json.dumps(data)
 
 
-def parse_json(string_thing):
-    return json.loads(string_thing)
+def parse_json(string):
+    return json.loads(string)
 
 
 def serialize_quad(quad):
     return get_json(quad)
 
 
-def get_hash(string_thing):
-    return hashlib.md5(string_thing.encode('utf8')).hexdigest()
+def get_hash(string):
+    return hashlib.md5(string.encode('utf8')).hexdigest()
 
 
 def get_hash_of_quad(quad):

@@ -16,11 +16,11 @@ Install dependencies and setup basic scaffolding::
 
 Run in development::
 
-    $ yarn shadow-cljs watch dativetop-app
+    $ yarn shadow-cljs watch dativetop-gui
 
 Open a CS REPL to the process::
 
-    $ yarn shadow-cljs cljs-repl dativetop-app
+    $ yarn shadow-cljs cljs-repl dativetop-gui
 
 Do the above two steps with Make and tmux::
 

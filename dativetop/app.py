@@ -90,7 +90,8 @@ def _verify_services(dativetop_app=None, dativetop_settings=None):
             'Failed to communicate the known local domain entities (e.g.,'
             ' running OLD instances to the DativeTop Server process. Error:'
             ' %s.', err)
-    logger.info(success)
+    else:
+        logger.info(success)
 
 
 class DativeTop(toga.App):

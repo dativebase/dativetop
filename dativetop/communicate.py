@@ -67,7 +67,8 @@ def _fetch_aol_from_dt_server():
         resp.raise_for_status()
         return resp.json(), None
     except json.decoder.JSONDecodeError:
-        msg = 'Failed to parse JSON from DativeTop Server response.'
+        msg = ('Failed to parse JSON from the DativeTop Server response to our'
+               ' GET request.')
         logger.exception(msg)
         return None, msg
     except requests.exceptions.RequestException:
@@ -76,7 +77,8 @@ def _fetch_aol_from_dt_server():
         return None, msg
 
 
-def _get_dt_server_aol():
+def _fetch_dativetop_server_aol():
+    """Fetch the AOL from the DativeTop Server."""
     aol, err = _fetch_aol_from_dt_server()
     if err:
         return None, err
@@ -87,21 +89,68 @@ def _get_dt_server_aol():
                       f' to list of AOL Appendables. Error: {exc}')
 
 
-def _get_dt_server_domain_entities():
-    dt_server_aol, err = _get_dt_server_aol()
-    if err:
-        return None, err
-    return aol_mod.aol_to_domain_entities(
-        dt_server_aol, domain.CONSTRUCTORS), None
+def _push_aol_to_dativetop_server(aol):
+    """Make a PUT request to the DativeTop server in order to push ``aol`` on to
+    the server's AOL.
+    """
+    try:
+        resp = requests.put(c.DATIVETOP_SERVER_URL, json=aol)
+        resp.raise_for_status()
+        return resp.json(), None
+    except json.decoder.JSONDecodeError:
+        msg = ('Failed to parse JSON from DativeTop Server response to our PUT'
+               ' request.')
+        logger.exception(msg)
+        return None, msg
+    except requests.exceptions.RequestException:
+        msg = 'Failed to push our AOL to the DativeTop Server.'
+        logger.exception(msg)
+        return None, msg
+
+
+def _calculate_aol_from_domain_entities_dict(domain_entities):
+    """Return an AOL encoding the domain entities in the dict
+    ``domain_entities``. Expected shape of ``domain_entities`` is a dict from
+    strings (pluralized names of domain entities) to sets of named tuples,
+    where each named tuple represents a single domain entity::
+
+        {'dative-apps': {DativeApp(url='http://127.0.0.1:5678/')},
+         'old-instances': {
+             OLDInstance(slug='abc', name='', url='...', leader='',
+                         state='not synced', is_auto_syncing=False),
+             OLDInstance(slug='def', name='', url='...', leader='',
+                         state='not synced', is_auto_syncing=False)},
+         'old-services': {OLDService(url='http://127.0.0.1:5679/')}}
+    """
+    aol = []
+    for domain_entity_coll_name, domain_entity_set in domain_entities.items():
+        domain_entity_type = domain_entity_coll_name[:-1]
+        for domain_entity in domain_entity_set:
+            for quad in aol_mod.instance_to_quads(
+                    domain_entity, domain_entity_type):
+                aol = aol_mod.append_to_aol(aol, quad)
+    return aol
 
 
 def communicate(domain_entities):
     """
-        {'dative_app': {'url': ''},
-         'old_instances': [{'slug': 'poop', 'url': 'http://127.0.0.1:5679/poop'},
-                           {'slug': 'panda', 'url': 'http://127.0.0.1:5679/panda'},
-                           {'slug': 'cartoon', 'url': 'http://127.0.0.1:5679/cartoon'}],
-         'old_service': {'url': ''}}
+    Communicate ``domain_entities`` to the DativeTop Server (DTS). Steps:
+
+    1. Fetch the AOL from the DTS.
+    2. a. If the AOL is empty, PUT our domain_entities-as-AOL to the DTS
+       b. If the AOL is not empty, then...
+
+          - do nothing (MVP)
+          - possibly calculate the patch to update it and PUT that patch
+
+    The ``domain_entities`` argument must be a map with the following keys and
+    types of values::
+
+        {'dative_app': {'url': 'http://127.0.0.1:5677'},
+         'old_instances': [
+             {'slug': 'bla', 'url': 'http://127.0.0.1:5679/bla'},
+             {'slug': 'oka', 'url': 'http://127.0.0.1:5679/oka'}],
+         'old_service': {'url': 'http://127.0.0.1:5679'}}
     """
     known_domain_entities, err = _convert_domain_entities_to_nts(
         domain_entities)
@@ -110,17 +159,40 @@ def communicate(domain_entities):
             'Failed to convert known domain entities to dtaoldm namedtuples.'
             ' Error: %s.', err)
         return None, err
-    dts_domain_entities, err = _get_dt_server_domain_entities()
+
+    logger.info('Known Domain Entities:')
+    logger.info(pprint.pformat(known_domain_entities))
+
+    dt_server_aol, err = _fetch_dativetop_server_aol()
     if err:
         logger.error(
-            'Failed to fetch domain entities from DativeTop Server.'
+            'Failed to fetch the AOL from the DativeTop Server.'
             ' Error: %s.', err)
         return None, err
 
-    logger.info('\nKnown Domain Entities:')
-    logger.info(pprint.pformat(known_domain_entities))
+    if dt_server_aol:
+        logger.info('The DativeTop Server has been initialized. There is no'
+                    ' need for the DativeTop app to communicate its'
+                    ' introspected domain entities to the server.')
+        dts_domain_entities = aol_mod.aol_to_domain_entities(
+            dt_server_aol, domain.CONSTRUCTORS)
+        logger.info('DativeTop Server Domain Entities:')
+        logger.info(pprint.pformat(dts_domain_entities))
+        return 'No operation', None
 
-    logger.info('\nDativeTop Server Domain Entities:')
-    logger.info(pprint.pformat(dts_domain_entities))
+    fresh_aol = _calculate_aol_from_domain_entities_dict(known_domain_entities)
+
+    logger.info('Known Domain Entities as AOL:')
+    logger.info(pprint.pformat(fresh_aol))
+
+    response, err = _push_aol_to_dativetop_server(fresh_aol)
+    if err:
+        logger.error(
+            'Failed to push the AOL of known domain entities to the DativeTop'
+            ' Server. Error: %s.', err)
+        return None, err
+
+    logger.info('Response from DTS to our PUT request:')
+    logger.info(response)
 
     return 'foxes', None

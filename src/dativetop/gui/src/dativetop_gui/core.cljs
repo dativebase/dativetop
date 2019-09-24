@@ -12,7 +12,10 @@
             [re-com.util :refer [enumerate]]
             [clojure.string :as str]
             [goog.string :as gstring]
-            [goog.string.format]))
+            [goog.string.format]
+            [dativetop-gui.aol :as aol]
+            [dativetop-gui.aol-fiddle :as aol-fiddle]
+            ))
 
 (defn new-old-valid?
   [new-old]
@@ -38,11 +41,13 @@
 
 ;; -- Domino 2 - Event Handlers -----------------------------------------------
 
+(def server-uri "http://127.0.0.1:5676/")
+
 (def get-server-state-map
   {:method :get
    :headers {:Content-Type "application/json; utf8"}
    :format :json
-   :uri "http://127.0.0.1:6543/"
+   :uri server-uri
    :timeout 8000
    :response-format (ajax/json-response-format {:keywords? true})})
 
@@ -58,21 +63,24 @@
  :poll-server-state
  (fn [{:keys [db]} _]
    (if (:dirty? db)
-     {:db db}
-     {:db db
-      :http-xhrio (-> get-server-state-map
-                      (assoc :on-success [:poll-server-state-success])
-                      (assoc :on-failure [:poll-server-state-failure]))})))
+     (do
+       ;(println "DB is dirty, not polling server state")
+       {:db db})
+     (do
+       ;(println "DB is clean, polling server state")
+       {:db db
+        :http-xhrio (-> get-server-state-map
+                        (assoc :on-success [:poll-server-state-success])
+                        (assoc :on-failure [:poll-server-state-failure]))}))))
 
 (def default-db
-  {:dative-url    ""
-   :old-url       ""
-   :new-old       {:name       ""
-                   :short-name ""
-                   :leader     ""}
-   :old-instances {}
-   :server-state  {}
-   :dirty?        false})
+  {:dative-apps []
+   :old-services []
+   :old-instances []
+   :aol []
+   :server-aol []
+   :new-old {:name "" :short-name "" :leader ""}
+   :dirty? false})
 
 (rf/reg-event-db
  :initialize-success
@@ -86,10 +94,16 @@
 
 (rf/reg-event-db
  :poll-server-state-success
- (fn [db [_ r]]
-   (if (:dirty? db)
-     (assoc db :server-state r)
-     (merge db r))))
+ (fn [{aol :aol stale-server-aol :server-aol :as db} [_ new-server-aol]]
+   (let [
+         updated-aol (aol/merge-aols new-server-aol aol)
+         domain-entities (aol/aol-to-domain-entities new-server-aol)]
+     ;(pprint/pprint aol)
+     ;(println (-> db :old-instances first keys))
+
+     (merge db
+            domain-entities
+            {:server-aol aol}))))
 
 (rf/reg-event-db
  :poll-server-state-failure
@@ -112,27 +126,40 @@
   (fn [db [_ new-name]]
     (assoc-in db [:new-old :name] new-name)))
 
-(rf/reg-event-db 
-  :auto-sync?-changed-DEPRECATED
-  (fn [db [_ old-url auto-sync?-val]]
-    (assoc-in db [:old-instances (keyword old-url) :auto-sync?] auto-sync?-val)))
+#_(def tmp
+  {:db (assoc db :dirty? true)
+   :http-xhrio {:method :put
+                :params updated-oi
+                :timeout 5000
+                :format (ajax/json-request-format)
+                :headers {:Content-Type "application/json; utf8"}
+                :uri server-uri
+                :response-format (ajax/json-response-format {:keywords? true})
+                :on-success [:auto-sync?-change-success]
+                :on-failure [:auto-sync?-change-failure]}})
 
 (rf/reg-event-fx
  :auto-sync?-changed
  (fn [{:keys [db]} [_ old-url auto-sync?-val]]
    (let [old-url-kw (keyword old-url)
-         current-oi (get-in db [:old-instances old-url-kw])
-         updated-oi (assoc current-oi :auto-sync? auto-sync?-val)]
-     {:db (assoc db :dirty? true)
-      :http-xhrio {:method :put
-                   :params updated-oi
-                   :timeout 5000
-                   :format (ajax/json-request-format)
-                   :headers {:Content-Type "application/json; utf8"}
-                   :uri "http://127.0.0.1:6543/"
-                   :response-format (ajax/json-response-format {:keywords? true})
-                   :on-success [:auto-sync?-change-success]
-                   :on-failure [:auto-sync?-change-failure]}})))
+         ;; current-oi (get-in db [:old-instances old-url-kw])
+         current-oi 
+         (->> db :old-instances (filter #(= old-url (:url %))) first)
+
+         _ (println "current OLD instance")
+         _ (println current-oi)
+
+         _ (println "new val:")
+         _ (println auto-sync?-val)
+
+         updated-oi (assoc current-oi :auto-sync? auto-sync?-val)
+
+         _ (println "updated OLD instance")
+         _ (println updated-oi)
+
+         ]
+     {:db (assoc db :dirty? true)}
+     )))
 
 (rf/reg-event-db
  :auto-sync?-change-success
@@ -183,7 +210,7 @@
 (rf/reg-sub
   :dative-url
   (fn [db _]
-    (:dative-url db)))
+    (-> db :dative-apps first :url)))
 
 ;; -- Domino 5 - View Functions ----------------------------------------------
 
@@ -330,46 +357,9 @@
      :class "rc-div-table"
      :children
      [[old-instances-gui-header]
-       (for [old-instance (sort-by :name (vals old-instances))]
+       (for [old-instance (sort-by :slug old-instances)]
          ^{:key (:url old-instance)}
          [old-instances-gui-row old-instance mouse-over])]]))
-
-(defn old-instances-div-DEPRECATED
-  []
-  (let [old-instances @(rf/subscribe [:old-instances])]
-    [data-table old-instances]
-    [:table.old-instances
-     [:thead
-      [:tr
-       [:th "Name"]
-       [:th "URL"]
-       [:th "Leader"]
-       [:th "Actions"]]]
-     [:tbody
-      (map format-old-instance-row (vals old-instances))
-      [:tr
-        [:td
-        [:input.new-old-name-input
-          {:type "text"
-           :id "new-old-name"
-           :value @(rf/subscribe [:new-old-name])
-           :on-change #(rf/dispatch [:new-old-name-change (-> % .-target .-value)])}]]
-        [:td
-        [:input.new-old-short-name-input
-          {:type "text"
-           :id "new-old-short-name"
-           :value @(rf/subscribe [:new-old-short-name])
-           :on-change #(rf/dispatch [:new-old-short-name-change (-> % .-target .-value)])}]]
-        [:td
-        [:input.new-old-leader-input
-          {:type "text"
-           :id "new-old-leader"
-           :value @(rf/subscribe [:new-old-leader])
-           :on-change #(rf/dispatch [:new-old-leader-change (-> % .-target .-value)])}]]
-        [:td
-        [:button
-          {:on-click #(rf/dispatch [:new-old-create])}
-          "Create"]]]]]))
 
 (defn old-instances-section
   []
@@ -471,3 +461,19 @@
   (rf/dispatch-sync [:initialize])     ;; puts a value into application state
   (reagent/render [ui]              ;; mount the application's ui into '<div id="app" />'
                   (js/document.getElementById "app")))
+
+
+(def test-aol
+  (list
+   [["d5265c65-fc1b-4b74-bc96-b9e4c08f4874"
+     "has"
+     "being"
+     "2019-09-23T17:29:01.623453"]
+    "fdf93a9485cc6fa332588d6af46ac6f4"
+    "ed1d168f2c45ce1ad624a8755cc49ee2"]
+   [["d5265c65-fc1b-4b74-bc96-b9e4c08f4874"
+     "is-a"
+     "dative-app"
+     "2019-09-23T17:29:01.623478"]
+    "59d604fc67114e745da4a5fd8eb58411"
+    "d3351a1932a6832ffcc39ee17a5661f2"]))

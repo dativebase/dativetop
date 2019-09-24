@@ -50,14 +50,28 @@ def append_to_log(request):
             ' body.')
         request.response.status = 400
         return {'error': 'Bad JSON in request body'}
-    mergee = aol.list_to_aol(payload)
+
+    logger.info('DativeTop Server: received this payload of type %s in'
+                ' append_to_log.', type(payload))
+    try:
+        mergee = aol.list_to_aol(payload)
+    except Exception as err:
+        logger.warning('Exception when calling ``mergee = aol.list_to_aol(payload)``')
+        logger.warning(err)
+        raise
+
+    logger.info('Got mergee AOL')
     target = aol.get_aol(AOL_PATH)
+    logger.info('Got target AOL')
     merged, err = aol.merge_aols(
         target, mergee, conflict_resolution_strategy='rebase')
     if err:
+        logger.warning('Failed to merge mergee into target')
         request.response.status = 400
         return {'error': err}
+    logger.info('Merged mergee into target')
     aol.persist_aol(merged, AOL_PATH)
+    logger.info('Persisted mergee into target')
     # What we want to return here is the AOL that the sender does not know
     # about ... the patch. See ongoing work at dtaoldm/aol.py.
     return []

@@ -78,3 +78,13 @@ def get_old_version():
         logger.warning('Neither of these files exist so unable to get OLD version: {}'
               ' {}'.format(old_setup_path, old_info_path))
         return 'unknown'
+
+
+def bind(func, maybe):
+  """Call ``func`` on the value (first element) of ``maybe`` iff its error
+  (second element) is ``None``, otherwise return ``(None, error)``.
+  """
+  value, error = maybe
+  if error is None:
+      return func(val)
+  return None, error

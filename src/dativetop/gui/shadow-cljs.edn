@@ -13,14 +13,15 @@
                 [reagent "0.7.0"]
                 [re-com "2.5.0"]
                 [secretary "1.2.3"]
-                [cider/cider-nrepl "0.16.0-SNAPSHOT"]]
- :nrepl {:port 8082}
- :dev-http {8080 "target/"}
+                ;[cider/cider-nrepl "0.20.0"]
+                ]
+ :nrepl {:port 8092}
+ :dev-http {8090 "target/"}
  :builds {:dativetop-gui {:output-dir "target/"
                           :asset-path "."
                           :target :browser
                           :modules {:main {:init-fn dativetop-gui.core/run}}
                           :devtools {:after-load dativetop-gui.core/run
                                      :http-root "target"
-                                     :http-port 8080}}}}
+                                     :http-port 8090}}}}
 

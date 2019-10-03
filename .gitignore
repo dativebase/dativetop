@@ -83,3 +83,4 @@ src/dativetop/gui/target/
 .nrepl-port
 .coveragerc
 aol.txt
+.cpcache/

@@ -1,8 +1,9 @@
 (ns dtaoldm.aol
   "DativeTop Append-only Log Domain Model (DTAOLDM)."
   (:require [clojure.set :refer [rename-keys]]
-            #?(:clj [cheshire.core :as ch])
             [clojure.string :as str]
+            [dtaoldm.utils :as u]
+            #?(:clj [cheshire.core :as ch])
             #?(:cljs [goog.crypt
                       goog.crypt.Md5]))
   #?(:clj (:import
@@ -27,6 +28,13 @@
   (if (str/starts-with? quad-attr "has-")
     (->> quad-attr (drop 4) (apply str))
     quad-attr))
+
+(defn domain-to-aol-attr-convert
+  "Convert an attribute from the domain-level syntax to the AOL-level syntax."
+  [quad-attr]
+  (-> quad-attr
+      name
+      (#(if (str/starts-with? % "is-") % (str "has-" %)))))
 
 (defn appendable->map
   [[[e a v _] _ _]]
@@ -159,7 +167,7 @@
 
 (defn get-tip-hash
   [aol]
-  (-> aol last (nth 2)))
+  (-> aol last (nth 2 nil)))
 
 (defn get-now
   []
@@ -245,3 +253,66 @@
           (if (and diff-only (not (seq new-from-target)))
             [new-from-target nil]
             [(reduce append-to-aol target new-from-mergee) nil]))))))
+
+(defn fiat-entity
+  "Return a 4-tuple that asserts the existence of a new entity."
+  ([] (fiat-entity (u/get-uuid)))
+  ([entity-id]
+   [entity-id
+    has-attr
+    being-val
+    (get-now-str)]))
+
+(defn fiat-attribute
+  "Return a 4-tuple that asserts that the entity referenced by ``entity-id``has
+  the supplied ``attribute`` with value ``value`` at call time UTC."
+  [entity-id attribute value]
+  [entity-id
+   attribute
+   value
+   (get-now-str)])
+
+(defn instance-to-quads
+  "Given a namedtuple domain entity ``instance`` of type ``instance_type``(a
+  string), return a tuple of quads (4-tuples) that would be sufficient to
+  represent that domain entity in the append-only log."
+  [{:keys [id] :as instance} instance-type]
+  (concat
+   (list (fiat-entity id) (fiat-attribute id is-a-attr instance-type))
+   (map (fn [[a v]] (fiat-attribute id (domain-to-aol-attr-convert a) v))
+        instance)))
+
+(defn serialize-appendable
+  [appendable]
+  (str (get-json appendable) \newline))
+
+(defn write-aol-to-file
+  "Write the entire append-only log ``aol`` to disk at path ``file-path``.
+  TODO: support ClojureScript on NodeJS (maybe)."
+  [aol file-path]
+  (with-open [w (clojure.java.io/writer file-path :append true)]
+    (->> aol
+         (map serialize-appendable)
+         str/join
+         (.write w))))
+
+(defn get-tip-hash-in-file
+  "Get the integrated hash of the last line (= EAVT quad) in the append-only log
+  at path ``file-path``. Note: this may be inefficient on large files."
+  [file-path]
+  (with-open [rdr (clojure.java.io/reader file-path)]
+    (-> rdr
+        line-seq
+        last
+        parse-json
+        last)))
+
+(defn get-new-appendables
+  "Return all appendables in ``aol`` that come after the appendable with
+  integrated hash ``tip-hash``."
+  [aol tip-hash]
+  (if-not tip-hash
+    aol
+    (->> aol
+         (drop-while (fn [[_ _ i-hash]] (not= i-hash tip-hash)))
+         (drop 1))))

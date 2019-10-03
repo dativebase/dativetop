@@ -51,7 +51,7 @@ def get_now_str():
 
 
 def get_json(data):
-    return json.dumps(data)
+    return json.dumps(data, separators=(',', ':'))
 
 
 def parse_json(string):

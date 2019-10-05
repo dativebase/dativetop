@@ -2,6 +2,7 @@
   "DativeTop Append-only Log Domain Model (DTAOLDM)."
   (:require [clojure.set :refer [rename-keys]]
             [clojure.string :as str]
+            [me.raynes.fs :as fs]
             [dtaoldm.utils :as u]
             #?(:clj [cheshire.core :as ch])
             #?(:cljs [goog.crypt
@@ -286,7 +287,7 @@
   [appendable]
   (str (get-json appendable) \newline))
 
-(defn write-aol-to-file
+(defn write-aol-to-file-deprecated
   "Write the entire append-only log ``aol`` to disk at path ``file-path``.
   TODO: support ClojureScript on NodeJS (maybe)."
   [aol file-path]
@@ -296,16 +297,31 @@
          str/join
          (.write w))))
 
+(defn aol->str
+  [aol]
+  (->> aol
+       (map serialize-appendable)
+       str/join))
+
+(defn read-aol
+  [file-path]
+  (->> file-path
+       slurp
+       str/split-lines
+       (map (comp vec parse-json))
+       vec))
+
 (defn get-tip-hash-in-file
   "Get the integrated hash of the last line (= EAVT quad) in the append-only log
   at path ``file-path``. Note: this may be inefficient on large files."
   [file-path]
-  (with-open [rdr (clojure.java.io/reader file-path)]
-    (-> rdr
-        line-seq
-        last
-        parse-json
-        last)))
+  (when (fs/file? file-path)
+    (with-open [rdr (clojure.java.io/reader file-path)]
+      (-> rdr
+          line-seq
+          last
+          parse-json
+          last))))
 
 (defn get-new-appendables
   "Return all appendables in ``aol`` that come after the appendable with
@@ -316,3 +332,23 @@
     (->> aol
          (drop-while (fn [[_ _ i-hash]] (not= i-hash tip-hash)))
          (drop 1))))
+
+(defn append-aol-to-file
+  "Write all of the new appendables in the append-only log ``aol`` to the file at
+  path ``file_path``."
+  [aol file-path]
+  (let [tip-hash (get-tip-hash-in-file file-path)]
+    (when-not (fs/file? file-path) (fs/touch file-path))
+    (spit file-path
+          (-> aol
+              (get-new-appendables tip-hash)
+              aol->str)
+          :append true)))
+
+(def persist-aol append-aol-to-file)
+
+(defn write-aol-to-file
+  [aol file-path]
+  (->> aol
+       aol->str
+       (spit file-path)))

@@ -352,3 +352,19 @@
   (->> aol
        aol->str
        (spit file-path)))
+
+(defn aol-valid?
+  "Compute whether ``aol`` is valid. Recompute all of its hashes and integrated
+  hashes and ensure all are correct."
+  [aol]
+  (every? true?
+          (mapcat
+           (fn [[_ _ previous-integrated-hash] [quad hash integrated-hash]]
+             (let [quad-hash (get-hash-of-quad quad)]
+               [(= hash quad-hash)
+                (= integrated-hash
+                   (-> [previous-integrated-hash quad-hash]
+                       get-json
+                       get-hash))]))
+           (cons (take 3 (repeat nil)) aol)
+           aol)))

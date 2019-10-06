@@ -201,6 +201,10 @@
     #_(aol/get-new-appendables aol "afb5d9f7113c8c0bc980824251412fbf")
     )
 
+  (conj [1 2] 3)
+
+  (cons 1 [2 3])
+
   ;; Show that persist-aol (append-aol-to-file) is idempotent (repeated
   ;; application has no effect)
   (let [aol [[["abc" "has" "being" "2019-10-03T19:32:15.354000"]
@@ -231,7 +235,29 @@
 
   (-> "aol-1.txt"
       aol/read-aol
-      aol/aol-to-domain-entities
-      )
+      aol/aol-to-domain-entities)
+
+  (let [aol [[["abc" "has" "being" "2019-10-03T19:32:15.354000"]
+              "42fffcf403277400df19049f92c967bf"
+              "4b9f78a556a1952e6930c8cbaf3373b0"]
+             [["abc" "is-a" "old-service" "2019-10-03T19:32:15.354000"]
+              "67c3e80f468f203ee7e94a9dd1e728ed"
+              "afb5d9f7113c8c0bc980824251412fbf"]
+             [["abc" "has-id" "abc" "2019-10-03T19:32:15.355000"]
+              "a2d3dff5f46ed617f2f844f743fc7cba"
+              "027461962d2602e1a329a434d5ffbd5c"]
+             [["abc" "has-url" "http://localhost:8087/old" "2019-10-03T19:32:15.355000"]
+              "0109ea56c3445e4d3ec9f02477436936"
+              "f79ed7936afa7c25290582039cff6fe1"]]
+        ]
+    (aol/aol-valid? aol))
+
+  (-> "aol-1.txt"
+      aol/read-aol
+      aol/aol-valid?)
+
+  (take 3 (repeat nil))
+
+  (every? true? [true true true])
 
 )

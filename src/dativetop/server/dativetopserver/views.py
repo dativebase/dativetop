@@ -6,11 +6,9 @@ import sys
 
 from wsgiref.simple_server import make_server
 from pyramid.config import Configurator
-from pyramid.request import Request
-from pyramid.view import view_config
 
 # import dativetopserver.aol as aol
-import dtaoldm.aol as aol
+import dtaoldm.aol as aol_mod
 
 
 AOL_PATH = 'aol.txt'
@@ -40,7 +38,9 @@ logger = logging.getLogger(__name__)
 
 
 def append_to_log(request):
-    """Add the sequence of appendables in the request to the append-only log."""
+    """Add the sequence of appendables in the request to the append-only
+    log.
+    """
     logger.info('Appending to the AOL')
     try:
         payload = request.json_body
@@ -54,23 +54,23 @@ def append_to_log(request):
     logger.info('DativeTop Server: received this payload of type %s in'
                 ' append_to_log.', type(payload))
     try:
-        mergee = aol.list_to_aol(payload)
+        mergee = aol_mod.list_to_aol(payload)
     except Exception as err:
-        logger.warning('Exception when calling ``mergee = aol.list_to_aol(payload)``')
+        logger.warning('Exception when calling ``mergee = aol_mod.list_to_aol(payload)``')
         logger.warning(err)
         raise
 
     logger.info('Got mergee AOL')
-    target = aol.get_aol(AOL_PATH)
+    target = aol_mod.get_aol(AOL_PATH)
     logger.info('Got target AOL')
-    merged, err = aol.merge_aols(
+    merged, err = aol_mod.merge_aols(
         target, mergee, conflict_resolution_strategy='rebase')
     if err:
         logger.warning('Failed to merge mergee into target')
         request.response.status = 400
         return {'error': err}
     logger.info('Merged mergee into target')
-    aol.persist_aol(merged, AOL_PATH)
+    aol_mod.persist_aol(merged, AOL_PATH)
     logger.info('Persisted mergee into target')
     # What we want to return here is the AOL that the sender does not know
     # about ... the patch. See ongoing work at dtaoldm/aol.py.
@@ -78,8 +78,11 @@ def append_to_log(request):
 
 
 def get_append_only_log(request):
-    logger.info('Returning the entire AOL')
-    return aol.get_aol(AOL_PATH)
+    logger.info('Returning the AOL after hash %s', request.GET.get('head'))
+    aol = aol_mod.get_aol(AOL_PATH)
+    ret = aol_mod.get_new_appendables(aol, request.GET.get('head'))
+    logger.info('Returning AOL suffix of %s elements', len(aol))
+    return ret
 
 
 def append_only_log(request):

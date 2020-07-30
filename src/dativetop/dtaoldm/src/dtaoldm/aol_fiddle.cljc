@@ -170,15 +170,15 @@
                   :url "http://localhost:8087/old"}
         quads (aol/instance-to-quads instance "old-service")
         aol (reduce aol/append-to-aol [] quads)]
-    (aol/write-aol-to-file aol "blargon5.txt"))
+    (aol/write-aol-to-file aol "scrap/blargon5.txt"))
 
   (-> "a\nb\n"
       str/split-lines
       )
 
-  (aol/get-tip-hash-in-file "blargon5.txt")
+  (aol/get-tip-hash-in-file "scrap/blargon5.txt")
 
-  (aol/get-tip-hash-in-file "blargon6.txt")
+  (aol/get-tip-hash-in-file "scrap/blargon6.txt")
 
   (let [aol [[["abc" "has" "being" "2019-10-03T19:32:15.354000"]
               "42fffcf403277400df19049f92c967bf"
@@ -221,19 +221,19 @@
               "f79ed7936afa7c25290582039cff6fe1"]]
         ]
     (doseq [i (range (count aol))]
-      (aol/append-aol-to-file (take (inc i) aol) "aol-1.txt"))
+      (aol/append-aol-to-file (take (inc i) aol) "scrap/aol-1.txt"))
     (doseq [i (range 100)]
-      (aol/persist-aol aol "aol-2.txt"))
-    (aol/persist-aol aol "aol-3.txt")
-    (= (slurp "aol-1.txt")
-       (slurp "aol-2.txt")
-       (slurp "aol-3.txt")))
+      (aol/persist-aol aol "scrap/aol-2.txt"))
+    (aol/persist-aol aol "scrap/aol-3.txt")
+    (= (slurp "scrap/aol-1.txt")
+       (slurp "scrap/aol-2.txt")
+       (slurp "scrap/aol-3.txt")))
 
   (fs/touch "dogs")
 
   (fs/file? "adogs")
 
-  (-> "aol-1.txt"
+  (-> "scrap/aol-1.txt"
       aol/read-aol
       aol/aol-to-domain-entities)
 
@@ -252,9 +252,13 @@
         ]
     (aol/aol-valid? aol))
 
-  (-> "aol-1.txt"
+  (-> "scrap/aol-1.txt"
       aol/read-aol
       aol/aol-valid?)
+
+  (let [orig-aol (aol/read-aol "scrap/aol-1.txt")
+        [merged err] (aol/merge-aols orig-aol [] :conflict-resolution-strategy :rebase)]
+    [(aol/get-tip-hash orig-aol) (aol/get-tip-hash merged)])
 
   (take 3 (repeat nil))
 

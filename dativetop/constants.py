@@ -6,7 +6,8 @@ import os
 HERE = os.path.dirname(os.path.dirname(__file__))
 CONFIG_PATH = os.path.join(HERE, 'dativetop', 'config.json')
 
-APP_NAME = 'DativeTop'
+APP_FORMAL_NAME = 'DativeTop'
+APP_NAME = 'dativetop'
 APP_ID = 'org.dativebase.dativetop'
 ICONS_FILE_NAME = 'OLDIcon.icns'
 ICONS_FILE_PATH = os.path.join('icons', ICONS_FILE_NAME)

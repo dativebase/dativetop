@@ -60,7 +60,7 @@ run-mac-os:  ## Build and run DativeTop .app bundle for Mac OS
 	beeware run macOS
 
 flush-dative:  # Reset Dative's known OLDs (servers)
-	echo "[]" > ${DATIVETOP_DATIVE_SERVERS_REL}
+	echo "[]" > ${DATIVETOP_DATIVE_SERVERS}
 
 flush-old:  # Destroy the default OLD instance's SQLite database and directory structure
 	mkdir -p ${OLD_DB_DIRPATH}; \

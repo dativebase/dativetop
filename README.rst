@@ -68,6 +68,11 @@ create and activate a Python 3.6 (or 3.5) virtual environment::
     $ source venv/bin/activate
     (venv) $
 
+.. note:: As of 2020-07, my local venv is broken. At present, the one at
+          ``../venv3.6.5`` should be used::
+
+              source ../venv3.6.5/bin/activate.fish
+
 Making sure you are in the directory containing this file, clone the Dative and
 OLD submodules using the following git command::
 
@@ -78,6 +83,15 @@ JavaScript file. (Note: you must install NodeJS first in order for this to
 work; on a Mac ``brew install node`` should work.)::
 
     (venv) $ make build-dative
+
+.. note:: As of 2020-07, building of Dative is failing due to issues with the
+          build tool and the deprecated state of CoffeeScript. The current
+          workaround is to use a previously built Dative. See the source at
+          /Users/joeldunham/Development/dative-dist-2020-07-20/dative/dist/.
+          Instead of the above command, run::
+              rm -rf src/dative/dist/
+              cp -r /Users/joeldunham/Development/dative-dist-2020-07-20/dative/dist \
+                  src/dative/dist
 
 Install the `BeeWare`_ suite, the OLD's requirements, and the OLD
 itself in development mode using either the following make rule::
@@ -252,6 +266,14 @@ Architecture
 
 - DativeTop Service: manages local OLD instances, syncs them to external
   leaders, ...
+
+
+Notes and Possible Issues
+================================================================================
+
+Warning seemingly from Mac OS:
+
+    2020-07-30 11:14:23.303 python[45386:5039192] *** WARNING: Method convertPointToBase: in class NSView is deprecated on 10.7 and later. It should not be used in new applications.
 
 
 .. _`DativeTop cannot upload files`: https://github.com/dativebase/dativebase/issues/16

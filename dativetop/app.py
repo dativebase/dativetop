@@ -60,7 +60,8 @@ def dativetop_on_exit(dativetop_app):
 def launch_dativetop(service_stoppers):
     icon = toga.Icon('icons/OLDIcon.icns')
     app = DativeTop(service_stoppers,
-                    name=c.APP_NAME,
+                    formal_name=c.APP_FORMAL_NAME,
+                    app_name=c.APP_NAME,
                     app_id=c.APP_ID,
                     on_exit=dativetop_on_exit,
                     icon=icon)
@@ -206,25 +207,28 @@ class DativeTop(toga.App):
         about_window = self.get_about_window()
         about_window.show()
 
-    def copy_cmd(self, sender):
-        pyperclip.copy(str(self.dative_gui.evaluate(dtjs.COPY_SELECTION_JS)))
+    async def copy_cmd(self, sender):
+        clip = await self.dative_gui.evaluate_javascript(dtjs.COPY_SELECTION_JS)
+        return pyperclip.copy(str(clip))
 
-    def cut_cmd(self, sender):
-        pyperclip.copy(str(self.dative_gui.evaluate(dtjs.CUT_SELECTION_JS)))
+    async def cut_cmd(self, sender):
+        clip = await self.dative_gui.evaluate_javascript(dtjs.CUT_SELECTION_JS)
+        return pyperclip.copy(str(clip))
 
-    def select_all_cmd(self, sender):
-        self.dative_gui.evaluate(dtjs.SELECT_ALL_JS)
+    async def select_all_cmd(self, sender):
+        await self.dative_gui.evaluate_javascript(dtjs.SELECT_ALL_JS)
 
-    def reset_dative_app_settings_cmd(self, sender):
+    async def reset_dative_app_settings_cmd(self, sender):
         """TODO: this does not seem to work ..."""
-        self.dative_gui.evaluate(dtjs.DESTROY_DATIVE_APP_SETTINGS)
+        await self.dative_gui.evaluate_javascript(dtjs.DESTROY_DATIVE_APP_SETTINGS)
         self.reload_cmd(sender)
 
-    def get_dative_app_settings(self):
+    async def get_dative_app_settings(self):
         """Extract the application settings dictionary from the Dative App.
         """
-        app_set_str = str(
-            self.dative_gui.evaluate(dtjs.GET_DATIVE_APP_SETTINGS)).strip()
+        app_set = await self.dative_gui.evaluate_javascript(
+            dtjs.GET_DATIVE_APP_SETTINGS)
+        app_set_str = str(app_set).strip()
         if app_set_str:
             try:
                 return json.loads(app_set_str)
@@ -232,7 +236,7 @@ class DativeTop(toga.App):
                 return {}
         return {}
 
-    def set_dative_app_settings(self, dative_app_settings_dict):
+    async def set_dative_app_settings(self, dative_app_settings_dict):
         """Set the application settings dictionary in the Dative App to a JSON
         string created by serializing ``dative_app_settings_dict``.
         """
@@ -242,15 +246,17 @@ class DativeTop(toga.App):
             dative_app_settings=json.dumps(dative_app_settings_dict))
         logger.debug('EVAL THIS!:')
         logger.debug(to_eval)
-        x = self.dative_gui.evaluate(to_eval)
+        x = await self.dative_gui.evaluate_javascript(to_eval)
         logger.debug('ret val:')
         logger.debug(x)
         self.main_window.content = y
         logger.debug('\n\n\nDative app settings now')
-        logger.debug(pprint.pformat(len(self.really_get_dative_app_settings()['servers'])))
+        app_settings = await self.really_get_dative_app_settings()['servers']
+        logger.debug(pprint.pformat(len(app_settings)))
 
-    def paste_cmd(self, sender):
-        self.dative_gui.evaluate(dtjs.paste_js(pyperclip.paste().replace('`', r'\`')))
+    async def paste_cmd(self, sender):
+        await self.dative_gui.evaluate_javascript(
+            dtjs.paste_js(pyperclip.paste().replace('`', r'\`')))
 
     def reload_cmd(self, sender):
         """This should be the equivalent of a browser refresh of the Dative
@@ -258,15 +264,15 @@ class DativeTop(toga.App):
         """
         self.dative_gui.url = c.DATIVE_URL
 
-    def really_get_dative_app_settings(self):
+    async def really_get_dative_app_settings(self):
         """Return the Dative application settings (from localStorage in the
         JavaScript process). If they are empty, try to retrieve them after
         display Dative in the WebView.
         """
-        dative_app_settings = self.get_dative_app_settings()
+        dative_app_settings = await self.get_dative_app_settings()
         if not dative_app_settings:
             self.main_window.content = self.dative_gui
-            dative_app_settings = self.get_dative_app_settings()
+            dative_app_settings = await self.get_dative_app_settings()
         return dative_app_settings
 
     def view_dativetop_gui_cmd(self, sender):
@@ -278,11 +284,11 @@ class DativeTop(toga.App):
     def copy_dative_url_to_clipboard_cmd(self, sender):
         pyperclip.copy(c.DATIVE_URL)
 
-    def back_cmd(self, sender):
-        self.dative_gui.evaluate('window.history.back();')
+    async def back_cmd(self, sender):
+        await self.dative_gui.evaluate_javascript('window.history.back();')
 
-    def forward_cmd(self, sender):
-        self.dative_gui.evaluate('window.history.forward();')
+    async def forward_cmd(self, sender):
+        await self.dative_gui.evaluate_javascript('window.history.forward();')
 
     @staticmethod
     def visit_old_web_site_cmd(sender):
@@ -315,7 +321,7 @@ class DativeTop(toga.App):
         This produces DativeTop's menu items (sometimes with keyboard
         shortcuts) and maps them to methods on this class.
         """
-        self.commands = toga.CommandSet(None)
+        self.commands = toga.CommandSet(self.factory)
 
         about_cmd = toga.Command(
             self.about_cmd,
@@ -326,35 +332,35 @@ class DativeTop(toga.App):
         cut_cmd = toga.Command(
             self.cut_cmd,
             label='Cut',
-            shortcut='x',
+            shortcut=toga.Key.MOD_1 + 'x',
             group=toga.Group.EDIT,
             section=0)
 
         copy_cmd = toga.Command(
             self.copy_cmd,
             label='Copy',
-            shortcut='c',
+            shortcut=toga.Key.MOD_1 + 'c',
             group=toga.Group.EDIT,
             section=0)
 
         paste_cmd = toga.Command(
             self.paste_cmd,
             label='Paste',
-            shortcut='v',
+            shortcut=toga.Key.MOD_1 + 'v',
             group=toga.Group.EDIT,
             section=0)
 
         select_all_cmd = toga.Command(
             self.select_all_cmd,
             label='Select All',
-            shortcut='a',
+            shortcut=toga.Key.MOD_1 + 'a',
             group=toga.Group.EDIT,
             section=0)
 
         quit_cmd = toga.Command(
             self.quit_cmd,
             'Quit DativeTop',
-            shortcut='q',
+            shortcut=toga.Key.MOD_1 + 'q',
             group=toga.Group.APP,
             section=sys.maxsize)
 
@@ -385,26 +391,26 @@ class DativeTop(toga.App):
         reload_cmd = toga.Command(
             self.reload_cmd,
             label='Reload DativeTop',
-            shortcut='r',
+            shortcut=toga.Key.MOD_1 + 'r',
             group=toga.Group.VIEW)
 
         reset_cmd = toga.Command(
             self.reset_dative_app_settings_cmd,
             label='Reset Dative',
-            shortcut='k',
+            shortcut=toga.Key.MOD_1 + 'k',
             group=toga.Group.VIEW)
 
         view_dativetop_gui_cmd = toga.Command(
             self.view_dativetop_gui_cmd,
             label='DativeTop',
-            shortcut='t',
+            shortcut=toga.Key.MOD_1 + 't',
             group=toga.Group.VIEW,
             order=2)
 
         view_dative_gui_cmd = toga.Command(
             self.view_dative_gui_cmd,
             label='Dative',
-            shortcut='d',
+            shortcut=toga.Key.MOD_1 + 'd',
             group=toga.Group.VIEW,
             order=3)
 
@@ -413,13 +419,13 @@ class DativeTop(toga.App):
         back_cmd = toga.Command(
             self.back_cmd,
             label='Back',
-            shortcut='[',
+            shortcut=toga.Key.MOD_1 + '[',
             group=history_group)
 
         forward_cmd = toga.Command(
             self.forward_cmd,
             label='Forward',
-            shortcut=']',
+            shortcut=toga.Key.MOD_1 + ']',
             group=history_group)
 
         self.commands.add(

@@ -14,8 +14,7 @@
             [goog.string :as gstring]
             [goog.string.format]
             [dativetop-gui.aol :as aol]
-            [dativetop-gui.aol-fiddle :as aol-fiddle]
-            ))
+            [dativetop-gui.aol-fiddle :as aol-fiddle]))
 
 (defn new-old-valid?
   [new-old]
@@ -35,41 +34,54 @@
 
 ;; -- Domino 1 - Event Dispatch -----------------------------------------------
 
-(defn dispatch-poll-server-state-event [] (rf/dispatch [:poll-server-state]))
+;; TODO: uncomment the dispatch here
+(defn dispatch-poll-server-state-event [] #_(rf/dispatch [:poll-server-state]))
 
 (defonce poller (js/setInterval dispatch-poll-server-state-event 1000))
+
+;; TODO: comment out the clearInterval here
+(js/clearInterval poller)
 
 ;; -- Domino 2 - Event Handlers -----------------------------------------------
 
 (def server-uri "http://127.0.0.1:5676/")
 
-(def get-server-state-map
+(defn get-server-state-map
+  "Return the map needed by the http-xhrio effect to fetch updates from the
+  server."
+  [db]
   {:method :get
    :headers {:Content-Type "application/json; utf8"}
    :format :json
    :uri server-uri
+   :params {:head (-> db :aol aol/get-tip-hash)}
    :timeout 8000
    :response-format (ajax/json-response-format {:keywords? true})})
 
 (rf/reg-event-fx
  :initialize
  (fn [{:keys [db]} _]
+   (println "INITIALIZE")
    {:db db
-    :http-xhrio (-> get-server-state-map
+    :http-xhrio (-> (get-server-state-map db)
                     (assoc :on-success [:initialize-success])
                     (assoc :on-failure [:initialize-failure]))}))
 
 (rf/reg-event-fx
  :poll-server-state
  (fn [{:keys [db]} _]
+   (println "registered event effects: :poll-server-state")
    (if (:dirty? db)
      (do
-       ;(println "DB is dirty, not polling server state")
+       (println "DB is dirty, not polling server state")
        {:db db})
      (do
-       ;(println "DB is clean, polling server state")
+       (println "DB is clean and tidy, polling server state")
+       (println "httpxhrio map:")
+       (println (get-server-state-map db))
+       ;; (pprint/pprint (keys db))
        {:db db
-        :http-xhrio (-> get-server-state-map
+        :http-xhrio (-> (get-server-state-map db)
                         (assoc :on-success [:poll-server-state-success])
                         (assoc :on-failure [:poll-server-state-failure]))}))))
 
@@ -85,7 +97,15 @@
 (rf/reg-event-db
  :initialize-success
  (fn [db [_ r]]
+   (println :initialize-success)
+   (pprint/pprint r)
    (merge default-db r)))
+
+(rf/reg-event-db
+ :reset-local-state
+ (fn [db _]
+   (println ":reset-local-state")
+   (assoc db :aol [])))
 
 (rf/reg-event-db
  :initialize-failure
@@ -96,14 +116,20 @@
  :poll-server-state-success
  (fn [{aol :aol stale-server-aol :server-aol :as db} [_ new-server-aol]]
    (let [
-         updated-aol (aol/merge-aols new-server-aol aol)
-         domain-entities (aol/aol-to-domain-entities new-server-aol)]
-     ;(pprint/pprint aol)
-     ;(println (-> db :old-instances first keys))
+         _ (println "our AOL tip hash " (aol/get-tip-hash aol))
+         _ (println "stale server AOL tip hash " (aol/get-tip-hash stale-server-aol))
+         _ (println "new server AOL tip hash " (aol/get-tip-hash new-server-aol))
 
+         [updated-aol err] (aol/merge-aols new-server-aol aol
+                                           :conflict-resolution-strategy :rebase)
+         _ (println "updated AOL tip hash " (aol/get-tip-hash updated-aol))
+         domain-entities (aol/aol-to-domain-entities updated-aol)]
+     ;; (pprint/pprint domain-entities)
+     (println (-> db :old-instances first keys))
      (merge db
             domain-entities
-            {:server-aol aol}))))
+            {:aol updated-aol
+             :server-aol new-server-aol}))))
 
 (rf/reg-event-db
  :poll-server-state-failure
@@ -382,7 +408,7 @@
      [title
       :label "DativeTop"
       :level :level1]]
-    [p "The DativeTop is an application for linguistic data management."]
+    [p (str "DativeTop is an application for linguistic data management.")]
     [p "It lets you manage Online Linguistic Database (OLD) instances on your
        local machine and configure them to sync with leader OLDs on the web."]
     [p "DativeTop lets you use the Dative graphical user interface to work with
@@ -423,6 +449,12 @@
      :align :center
      :children
      [[p "These are your local Online Linguistic Database instances."]
+      [button
+       :label "Fetch Server State"
+       :on-click #(rf/dispatch [:poll-server-state])]
+      [button
+       :label "Reset Local State"
+       :on-click #(rf/dispatch [:reset-local-state])]
       [p "You may have to manually tell Dative about these OLD instances by
          adding new \"server\" instances for them under Dative > Application
          Settings."]]]

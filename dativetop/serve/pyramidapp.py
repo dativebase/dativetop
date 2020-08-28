@@ -1,6 +1,6 @@
 """DativeTop: Serve a Pyramid app
 
-Functionality for serving the a Pyramid web service locally, in a new
+Functionality for serving a Pyramid web service locally, in a new
 process, using the pserve Python server.
 """
 
@@ -12,7 +12,6 @@ import threading
 
 
 logger = logging.getLogger(__name__)
-
 
 def _fork_server_process(ip, port, root_path, config='config.ini'):
     """Use Pyramid's pserve executable to serve the Pyramid app in a new

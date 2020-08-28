@@ -2,6 +2,19 @@
   DativeTop: `DativeBase`_ as a Desktop Application
 ================================================================================
 
+
++------------------+
+| GUI              |
+| aol:        abc  |
+| server-aol: abc  |
++------------------+
+
++------------------+
+| Server           |
+| aol:        abcd |
++------------------+
+
+
 DativeTop local services URLs:
 
 - http://127.0.0.1:5678/

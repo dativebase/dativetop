@@ -100,7 +100,6 @@
        (map (fn [[k v]] [(-> k (str "s") keyword) v]))
        (into {})))
 
-
 (defn locate-start-index-reducer
   "Function to be passed to ``reduce`` in order to determine the starting index
   (int) of the suffix of a mergee changset (sequence) into a target changeset
@@ -225,16 +224,17 @@
 
   Parameter ``target`` (coll) is the AOL that will receive the changes.
   Parameter ``mergee`` (coll) is the AOL that will be merged into target; the
-  AOL that provides the changes.
-  Keyword parameter conflict-resolution-strategy (keyword) describes how to
-  handle conflicts. If the strategy is 'rebase', we will append the new quads
+    AOL that provides the changes.
+  Keyword parameter ``:conflict-resolution-strategy`` (keyword) describes how to
+  handle conflicts. If the strategy is ``:rebase``, we will append the new quads
   from ``mergee`` onto ``target``, despite the fact that this will result in
   hashes for those appended quads that differ from their input hashes in
   ``mergee``.
-  Keyword parameter ``diff-only`` (boolean) will, when true, result in a return
+  Keyword parameter ``:diff-only`` (boolean) will, when true, result in a return
   value consisting simply of the suffix of the merged result that ``mergee``
   would need to append to itself in order to become identical with ``target``;
   when false, we return the entire modified ``target``.
+
   Always returns a 2-tuple maybe-type structure."
   [target mergee
    & {:keys [conflict-resolution-strategy diff-only]
@@ -272,7 +272,7 @@
    (get-now-str)])
 
 (defn instance-to-quads
-  "Given a namedtuple domain entity ``instance`` of type ``instance_type``(a
+  "Given a namedtuple domain entity ``instance`` of type ``instance-type``(a
   string), return a tuple of quads (4-tuples) that would be sufficient to
   represent that domain entity in the append-only log."
   [{:keys [id] :as instance} instance-type]
@@ -338,7 +338,7 @@
 
 #?(:clj (def persist-aol append-aol-to-file))
 
-#?(:clj 
+#?(:clj
    (defn write-aol-to-file
      [aol file-path]
      (->> aol

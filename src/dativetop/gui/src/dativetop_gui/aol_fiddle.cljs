@@ -21,6 +21,16 @@
 
 (comment
 
+  (let [id "d5265c65-fc1b-4b74-bc96-b9e4c08f4874"
+        inst-type "dative-app"
+        de {:type inst-type :id id}
+        quads (aol/instance-to-quads de inst-type)]
+    [de quads])
+
+  (take 1 test-aol)
+
+  (aol/aol-valid? (take 1 test-aol))
+
   (aol/aol-to-domain-attr-convert "has-cat")
 
   (aol/aol-to-domain-attr-convert "is-cat")
@@ -52,5 +62,12 @@
   (= () (aol/find-changes target-abc target-abc))
 
   (* 8 8)
+
+  test-aol
+
+  (= test-aol test-aol)
+
+  (let [[x e] (aol/merge-aols test-aol test-aol)]
+    (= x test-aol))
 
 )

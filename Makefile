@@ -88,6 +88,10 @@ dashboard:  ## Open tmux panes prepped to pilot DativeTop and its services
 		split-window -h \; \
 		split-window -v \;
 
+serve-dt-server:  ## Serve the DativeTop Server Pyramid process independently
+	cd ${HERE}/src/dativetop/server; \
+    ${HERE}/../venv3.6.5/bin/pserve --reload config.ini http_port=4676 http_host=127.0.0.1
+
 help:  ## Print this help message.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 

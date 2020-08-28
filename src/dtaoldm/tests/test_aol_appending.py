@@ -31,37 +31,12 @@ OKA_OLD_INSTANCE_UPDATED, _ = domain.construct_old_instance(
     **oka_old_instance_updated)
 
 
-# TODO: is anything in dumbass useful?
-
-def dumbass():
-    initial_aol = generate_initial_aol()
-    print('initial AOL')
-    pprint.pprint(initial_aol)
-
-    extracted_domain_entities = sut.aol_to_domain_entities(
-        initial_aol, domain.CONSTRUCTORS)
-    extracted_old_instance = [
-        oi for oi in extracted_domain_entities['old-instances']
-        if oi.slug == OKA_OLD_INSTANCE.slug][0]
-    new_quads = diff(extracted_old_instance, OKA_OLD_INSTANCE_UPDATED,
-                     domain.OLD_INSTANCE_TYPE)
-
-    new_aol = initial_aol[:]
-    for quad in new_quads:
-        sut.append_to_aol(new_aol, quad)
-    print('modified AOL')
-    pprint.pprint(new_aol)
-
-    sut.merge_aols(initial_aol, new_aol)
-
-
 def generate_initial_aol():
     aol = []
     for quad in sut.instance_to_quads(
             OKA_OLD_INSTANCE, domain.OLD_INSTANCE_TYPE):
         sut.append_to_aol(aol, quad)
     return aol
-
 
 
 ChangesCase = namedtuple('ChangesCase', 'target, mergee, changes')

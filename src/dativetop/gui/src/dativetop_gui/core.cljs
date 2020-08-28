@@ -44,7 +44,9 @@
 
 ;; -- Domino 2 - Event Handlers -----------------------------------------------
 
-(def server-uri "http://127.0.0.1:5676/")
+;; (def server-uri "http://127.0.0.1:5676/")
+
+(def server-uri "http://127.0.0.1:4676/")
 
 (defn get-server-state-map
   "Return the map needed by the http-xhrio effect to fetch updates from the
@@ -54,7 +56,7 @@
    :headers {:Content-Type "application/json; utf8"}
    :format :json
    :uri server-uri
-   :params {:head (-> db :aol aol/get-tip-hash)}
+   :params {:head (-> db :server-aol aol/get-tip-hash)}
    :timeout 8000
    :response-format (ajax/json-response-format {:keywords? true})})
 
@@ -96,10 +98,11 @@
 
 (rf/reg-event-db
  :initialize-success
- (fn [db [_ r]]
-   (println :initialize-success)
-   (pprint/pprint r)
-   (merge default-db r)))
+ (fn [db [_ aol]]
+   (merge db
+          (aol/aol-to-domain-entities aol)
+          {:aol aol
+           :server-aol aol})))
 
 (rf/reg-event-db
  :reset-local-state
@@ -113,16 +116,11 @@
    default-db))
 
 (rf/reg-event-db
- :poll-server-state-success
- (fn [{aol :aol stale-server-aol :server-aol :as db} [_ new-server-aol]]
-   (let [
-         _ (println "our AOL tip hash " (aol/get-tip-hash aol))
-         _ (println "stale server AOL tip hash " (aol/get-tip-hash stale-server-aol))
-         _ (println "new server AOL tip hash " (aol/get-tip-hash new-server-aol))
-
-         [updated-aol err] (aol/merge-aols new-server-aol aol
-                                           :conflict-resolution-strategy :rebase)
-         _ (println "updated AOL tip hash " (aol/get-tip-hash updated-aol))
+ :poll-server-state-success-FART
+ (fn [{aol :aol server-aol :server-aol :as db} [_ server-sfx]]
+   (let [[updated-aol err] (if (seq server-sfx)
+                             (aol/merge-aols new-server-aol aol)
+                             [aol nil])
          domain-entities (aol/aol-to-domain-entities updated-aol)]
      ;; (pprint/pprint domain-entities)
      (println (-> db :old-instances first keys))
@@ -130,6 +128,24 @@
             domain-entities
             {:aol updated-aol
              :server-aol new-server-aol}))))
+
+;; :server-aol is ALWAYS a prefix of, or identical to, the true server-side AOL
+;; :aol MAY branch off of :server-aol; it is merged back in via a
+;; rebase/last-writer-wins strategy...
+
+(defn merge-server-state [{aol :aol server-aol :server-aol :as db} [_ server-sfx]]
+  (let [[updated-aol err] (if (seq server-sfx)
+                            (aol/merge-aols new-server-aol aol)
+                            [aol nil])
+        domain-entities (aol/aol-to-domain-entities updated-aol)]
+    ;; (pprint/pprint domain-entities)
+    (println (-> db :old-instances first keys))
+    (merge db
+           domain-entities
+           {:aol updated-aol
+            :server-aol new-server-aol})))
+
+(rf/reg-event-db :poll-server-state-success merge-server-state)
 
 (rf/reg-event-db
  :poll-server-state-failure
@@ -509,3 +525,11 @@
      "2019-09-23T17:29:01.623478"]
     "59d604fc67114e745da4a5fd8eb58411"
     "d3351a1932a6832ffcc39ee17a5661f2"]))
+
+(comment
+
+  (* 8 8)
+
+  (println "Hello from the REPL!")
+
+)

@@ -1,6 +1,6 @@
 """Append-only Log
 
-Functionality for persisting domain objects as appendables entities in an
+Functionality for persisting domain objects as appendable entities in an
 append-only log.
 
 An appendable is a 3-tuple consisting of a "quad", that quad's hash, and that

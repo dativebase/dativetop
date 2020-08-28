@@ -78,10 +78,12 @@ def append_to_log(request):
 
 
 def get_append_only_log(request):
-    logger.info('Returning the AOL after hash %s', request.GET.get('head'))
+    logger.info('MONKEYS!')
+    tip_hash = request.GET.get('head')
+    logger.info('Returning the AOL after hash %s', tip_hash)
     aol = aol_mod.get_aol(AOL_PATH)
-    ret = aol_mod.get_new_appendables(aol, request.GET.get('head'))
-    logger.info('Returning AOL suffix of %s elements', len(aol))
+    ret = aol_mod.get_new_appendables(aol, tip_hash)
+    logger.info('Returning AOL suffix of %s elements', len(ret))
     return ret
 
 

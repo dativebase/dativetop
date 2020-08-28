@@ -61,7 +61,25 @@ create and activate a Python 3.6 (or 3.5) virtual environment::
     $ source venv/bin/activate
     (venv) $
 
-Making sure you are in the directory containing this file, clone the Dative and
+For the next command you need to have Yarn and Grunt installed. You can very this with the following::
+
+  yarn --version
+
+and::
+
+  grunt --version
+ 
+You may visit https://classic.yarnpkg.com/en/docs/install/#debian-stable and https://tecadmin.net/install-grunt-on-ubuntu/ for details. The commands necessary to install them are following. Yarn::
+
+  curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+  echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+  sudo apt update && sudo apt install yarn
+  
+Grunt::
+  
+  sudo npm install -g grunt
+
+Making sure you are in the directory containing this (README) file, clone the Dative and
 OLD submodules using the following git command::
 
     (venv) $ git submodule update --init --recursive

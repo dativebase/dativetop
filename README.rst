@@ -61,7 +61,7 @@ create and activate a Python 3.6 (or 3.5) virtual environment::
     $ source venv/bin/activate
     (venv) $
 
-For the next command you need to have Yarn and Grunt installed. You can very this with the following::
+For the next command you need to have Yarn and Grunt installed. You may verify this with the following::
 
   yarn --version
 

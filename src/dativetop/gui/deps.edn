@@ -1,0 +1,4 @@
+{:deps
+ vbclient {:local/root
+           "/Users/joeldunham/Development/dativetop/dativetop/src/dativetop/dtaoldm"}
+}

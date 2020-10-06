@@ -37,7 +37,7 @@ build-dative:  ## Build Dative: install NPM dependencies, compile/minify JS and 
 		echo "[]" > ${DATIVETOP_DATIVE_SERVERS_REL}
 
 launch:  ## Launch DativeTop in development mode
-	python -m dativetop
+	@python -m dativetop
 
 register-old-with-dative:  ## Register the default OLD instance with Dative's list of known servers
 	DATIVETOP_OLD_PORT=${DATIVETOP_OLD_PORT} \
@@ -60,7 +60,7 @@ run-mac-os:  ## Build and run DativeTop .app bundle for Mac OS
 	beeware run macOS
 
 flush-dative:  # Reset Dative's known OLDs (servers)
-	echo "[]" > ${DATIVETOP_DATIVE_SERVERS_REL}
+	echo "[]" > ${DATIVETOP_DATIVE_SERVERS}
 
 flush-old:  # Destroy the default OLD instance's SQLite database and directory structure
 	mkdir -p ${OLD_DB_DIRPATH}; \
@@ -74,10 +74,23 @@ flush: flush-dative flush-old  ## Delete ALL user data
 
 bootstrap-old: flush-old initialize-old  ## Generate a new default OLD database and directory structure, deleting any previous ones
 
-install:
+install:  ## Install all of the required dependencies
 	pip install -r requirements.txt && \
 		pip install -r src/old/requirements/testsqlite.txt && \
-		pip install -e src/old/
+		pip install -e src/old/ && \
+		pip install -e src/dativetop/server/ && \
+		pip install requirements/wheels/dativetop_append_only_log_domain_model-0.0.1-py3-none-any.whl
+
+dashboard:  ## Open tmux panes prepped to pilot DativeTop and its services
+	tmux new-session \; \
+		send-keys 'source venv/bin/activate' C-m \; \
+		send-keys 'make launch' C-m \; \
+		split-window -h \; \
+		split-window -v \;
+
+serve-dt-server:  ## Serve the DativeTop Server Pyramid process independently
+	cd ${HERE}/src/dativetop/server; \
+    ${HERE}/../venv3.6.5/bin/pserve --reload config.ini http_port=4676 http_host=127.0.0.1
 
 help:  ## Print this help message.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

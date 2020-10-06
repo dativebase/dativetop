@@ -12,5 +12,7 @@
     "dativetop_state_path": "<CWD>/dativetop.json",
     "dflt_dativetop_old_name": "myold",
     "dflt_dativetop_old_dir_path": "<old_permanent_store>/<dflt_dativetop_old_name>",
-    "dflt_dativetop_old_db_path": "<old_db_dirpath>/<dflt_dativetop_old_name>.sqlite"
+    "dflt_dativetop_old_db_path": "<old_db_dirpath>/<dflt_dativetop_old_name>.sqlite",
+    "dflt_old_username": "admin",
+    "dflt_old_password": "adminA_1"
 }

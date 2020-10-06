@@ -2,6 +2,26 @@
   DativeTop: `DativeBase`_ as a Desktop Application
 ================================================================================
 
+
++------------------+
+| GUI              |
+| aol:        abc  |
+| server-aol: abc  |
++------------------+
+
++------------------+
+| Server           |
+| aol:        abcd |
++------------------+
+
+
+DativeTop local services URLs:
+
+- http://127.0.0.1:5678/
+- http://127.0.0.1:5677/
+- http://127.0.0.1:5676/
+- http://127.0.0.1:5679/
+
 `DativeBase`_ is *web-based* software for linguistic fieldwork. DativeTop is
 DativeBase as a *desktop* application. It is `Dative`_ and the `OLD`_ wrapped
 in a `Toga`_ and packaged into a `Briefcase`_.
@@ -61,6 +81,11 @@ create and activate a Python 3.6 (or 3.5) virtual environment::
     $ source venv/bin/activate
     (venv) $
 
+.. note:: As of 2020-07, my local venv is broken. At present, the one at
+          ``../venv3.6.5`` should be used::
+
+              source ../venv3.6.5/bin/activate.fish
+
 Making sure you are in the directory containing this file, clone the Dative and
 OLD submodules using the following git command::
 
@@ -72,6 +97,15 @@ work; on a Mac ``brew install node`` should work.)::
 
     (venv) $ make build-dative
 
+.. note:: As of 2020-07, building of Dative is failing due to issues with the
+          build tool and the deprecated state of CoffeeScript. The current
+          workaround is to use a previously built Dative. See the source at
+          /Users/joeldunham/Development/dative-dist-2020-07-20/dative/dist/.
+          Instead of the above command, run::
+              rm -rf src/dative/dist/
+              cp -r /Users/joeldunham/Development/dative-dist-2020-07-20/dative/dist \
+                  src/dative/dist
+
 Install the `BeeWare`_ suite, the OLD's requirements, and the OLD
 itself in development mode using either the following make rule::
 
@@ -82,6 +116,7 @@ or these separate ``pip install`` commands::
     (venv) $ pip install -r requirements.txt
     (venv) $ pip install -r src/old/requirements/testsqlite.txt
     (venv) $ pip install -e src/old/
+    (venv) $ pip install -e src/dativetop/server/dativetopserver/
 
 Create the filesystem structure and (SQLite) database for a local OLD named
 "myold"::
@@ -225,6 +260,33 @@ Cocoa WebView widget. See the `DativeTop cannot upload files`_ issue on GitHub.
 The workaround at present is to open DativeTop's local Dative in a browser and
 do your file upload from there. DativeTop makes this easy: click on the "Help"
 menu and then click "Visit Dative in Browser".
+
+
+Architecture
+================================================================================
+
+- DativeTop Toga App:
+
+  - minimal Toga native GUI components: WebViews, top-level menu items, icons
+  - starts and serves local servers for 4 other components: Dative GUI, OLD
+    Service, DativeTop Service, DativeTop GUI.
+
+- Dative GUI: interface to multiple OLD instances
+
+- OLD Service: serves OLD instances at local URLs
+
+- DativeTop GUI: interface to DativeTop Service
+
+- DativeTop Service: manages local OLD instances, syncs them to external
+  leaders, ...
+
+
+Notes and Possible Issues
+================================================================================
+
+Warning seemingly from Mac OS:
+
+    2020-07-30 11:14:23.303 python[45386:5039192] *** WARNING: Method convertPointToBase: in class NSView is deprecated on 10.7 and later. It should not be used in new applications.
 
 
 .. _`DativeTop cannot upload files`: https://github.com/dativebase/dativebase/issues/16

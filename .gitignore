@@ -36,6 +36,7 @@ Temporary Items
 .Python
 env/
 venv/
+venvpyr173/
 build/
 develop-eggs/
 dist/
@@ -73,3 +74,13 @@ oldinstances/
 docker-wine/
 docker-wix/
 winebin/
+
+node_modules/
+.shadow-cljs/
+src/dativetop/shadow-re-frame/
+src/dativetop/minimal-shadow-cljs-browser/
+src/dativetop/gui/target/
+.nrepl-port
+.coveragerc
+aol.txt
+.cpcache/

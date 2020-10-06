@@ -1,2 +1,3 @@
 beeware==0.1.1
+oldclient==0.0.1
 pyperclip==1.7.0

@@ -1,0 +1,4 @@
+{:deps
+ {cheshire {:mvn/version "5.8.1"}
+  me.raynes/fs {:mvn/version "1.4.6"}}
+}

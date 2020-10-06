@@ -6,10 +6,10 @@ import subprocess
 import sys
 
 from dativetop.getsettings import get_settings
+import dativetop.logging
 
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 def get_core_paths(app_dir):
@@ -144,7 +144,7 @@ def install_old(app_dir):
             if output == b'' and p.poll() is not None:
                 break
             if output:
-                print(output.decode('utf8').strip())
+                logger.info(output.decode('utf8').strip())
         rc = p.poll()
         logger.info('Command exited with status code %s.', rc)
     logger.info('Installed the OLD.')

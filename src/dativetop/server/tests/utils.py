@@ -4,8 +4,8 @@
 from collections import namedtuple
 import os
 
-import dativetop.aol as aol_mod
-import dativetop.domain as domain
+import dativetopserver.aol as aol_mod
+import dativetopserver.domain as domain
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))

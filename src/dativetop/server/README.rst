@@ -8,3 +8,7 @@ that can be read, with GET, and appended to, with PUT.
 Serve it::
 
     $ pserve --reload config.ini http_port=4676 http_host=127.0.0.1
+
+Run the tests::
+
+    $ pytest

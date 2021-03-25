@@ -1,5 +1,6 @@
 {:source-paths ["src"]
- :dependencies [[re-frame "0.10.5"]
+ :dependencies [#_[re-frame "0.10.5"]
+                [re-frame "1.1.2"]
                 [day8.re-frame/trace "0.1.19-react16"]
                 [re-view/re-frame-simple "0.1.4"]
                 [binaryage/devtools "0.9.7"]

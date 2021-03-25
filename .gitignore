@@ -38,6 +38,8 @@ env/
 venv/
 venvpyr173/
 build/
+_build/
+_wip/
 develop-eggs/
 dist/
 downloads/
@@ -84,3 +86,5 @@ src/dativetop/gui/target/
 .coveragerc
 aol.txt
 .cpcache/
+
+src/dativetop.dist-info/

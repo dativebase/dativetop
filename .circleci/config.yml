@@ -1,0 +1,20 @@
+version: 2.1
+
+jobs:
+  build-dativetop-gui:
+    docker:
+      - image: cimg/base:2020.10
+    environment:
+      IMAGE_NAME: dativebase/dativetop-gui
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build Docker image
+          command: cd docker build -t $IMAGE_NAME:latest .
+
+# workflows:
+#   version: 2
+#   "test_old":
+#     jobs:
+#       - test

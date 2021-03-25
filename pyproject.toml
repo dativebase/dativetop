@@ -1,0 +1,49 @@
+[tool.briefcase]
+project_name = "DativeTop"
+bundle = "ca.dative"
+version = "0.0.1"
+url = "https://www.dative.ca/dativetop"
+license = "BSD license"
+author = 'Joel Dunham'
+author_email = "jrwdunham@gmail.com"
+
+[tool.briefcase.app.dativetop]
+formal_name = "DativeTop"
+description = "A desktop application for managing linguistic fieldwork data"
+icon = "src/dativetop/resources/dativetop"
+sources = ['src/dativetop']
+requires = []
+
+
+[tool.briefcase.app.dativetop.macOS]
+requires = [
+    'toga-cocoa>=0.3.0.dev26',
+]
+
+[tool.briefcase.app.dativetop.linux]
+requires = [
+    'toga-gtk>=0.3.0.dev26',
+]
+system_requires = [
+    'libgirepository1.0-dev',
+    'libcairo2-dev',
+    'libpango1.0-dev',
+    'libwebkitgtk-3.0-0',
+    'gir1.2-webkit-3.0',
+]
+
+[tool.briefcase.app.dativetop.windows]
+requires = [
+    'toga-winforms>=0.3.0.dev26',
+]
+
+# Mobile deployments
+[tool.briefcase.app.dativetop.iOS]
+requires = [
+    'toga-iOS>=0.3.0.dev26',
+]
+
+[tool.briefcase.app.dativetop.android]
+requires = [
+    'toga-android>=0.3.0.dev26',
+]

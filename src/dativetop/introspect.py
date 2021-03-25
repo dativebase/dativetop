@@ -95,7 +95,6 @@ def _confirm_all_services_up(attempt_count=1, wait=1, urls=None):
             resp = requests.get(url)
             resp.raise_for_status()
         except:
-            logger.warning('%s is not yet running at %s.', name, url)
             failed.append((name, url))
         else:
             logger.info('%s is running at %s', name, url)
@@ -107,7 +106,9 @@ def _confirm_all_services_up(attempt_count=1, wait=1, urls=None):
             urls=failed)
     if failed:
         failed_str = ', '.join('{0} at {1}'.format(*s) for s in failed)
-        return None, f'Failed to detect the following service(s): {failed_str}.'
+        msg = f'Failed to detect the following service(s): {failed_str}.'
+        logger.error(msg)
+        return None, msg
     return True, None
 
 

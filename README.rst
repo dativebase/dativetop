@@ -3,25 +3,6 @@
 ================================================================================
 
 
-+------------------+
-| GUI              |
-| aol:        abc  |
-| server-aol: abc  |
-+------------------+
-
-+------------------+
-| Server           |
-| aol:        abcd |
-+------------------+
-
-
-DativeTop local services URLs:
-
-- http://127.0.0.1:5678/
-- http://127.0.0.1:5677/
-- http://127.0.0.1:5676/
-- http://127.0.0.1:5679/
-
 `DativeBase`_ is *web-based* software for linguistic fieldwork. DativeTop is
 DativeBase as a *desktop* application. It is `Dative`_ and the `OLD`_ wrapped
 in a `Toga`_ and packaged into a `Briefcase`_.
@@ -68,60 +49,74 @@ from source::
     $ make create-old-instance OLD_NAME=myold
     $ make launch
 
+To install all of the required dependencies manually::
+
+    $ pip install -r requirements.txt && \
+		$ pip install -r src/old/requirements/testsqlite.txt && \
+		$ pip install -e src/old/ && \
+		$ pip install -e src/dativetop/server/ && \
+		$ pip install requirements/wheels/dativetop_append_only_log_domain_model-0.0.1-py3-none-any.whl
+
+This command may be useful::
+
+	  $ initialize_old src/old/config.ini myold
+
 
 Detailed Source Install
 --------------------------------------------------------------------------------
 
-First, Ensure that you have GNU Make installed by running ``make -v``. Then
-create and activate a Python 3.6 (or 3.5) virtual environment::
+Detailed MacOS Source Install
+````````````````````````````````````````````````````````````````````````````````
 
-    $ python3 --version
-    Python 3.6.0
-    $ python3 -m venv venv
-    $ source venv/bin/activate
+The following instructions should install DativeTop on Mac OS.
+
+Activate a Python 3.6 virtual environment (creating it first with ``python -m
+venv venv`` if needed)::
+
+    $ source ../venv3.6.5/bin/activate.fish
     (venv) $
-
-.. note:: As of 2020-07, my local venv is broken. At present, the one at
-          ``../venv3.6.5`` should be used::
-
-              source ../venv3.6.5/bin/activate.fish
 
 Making sure you are in the directory containing this file, clone the Dative and
 OLD submodules using the following git command::
 
-    (venv) $ git submodule update --init --recursive
+Extract the pre-built Dative (JavaScript) source to ``src/dative/dist/``::
 
-Then build Dative, i.e., compile its CoffeeScript source to a single minified
-JavaScript file. (Note: you must install NodeJS first in order for this to
-work; on a Mac ``brew install node`` should work.)::
+    $ rm -rf src/dative/dist/
+    $ cd src/dative/releases/
+    $ tar -zxvf release-2c18bdf158fc8664404e67e5530b9a95a18d6d11.tar.gz
+    $ cp -r release-9e40102c7fa79618964df7ac9a0a370cc60ee9bd ./../dist
+    $ cd ../../..
 
-    (venv) $ make build-dative
+Install DativeTop's (the Toga/Briefcase app's) Python dependencies::
 
-.. note:: As of 2020-07, building of Dative is failing due to issues with the
-          build tool and the deprecated state of CoffeeScript. The current
-          workaround is to use a previously built Dative. See the source at
-          /Users/joeldunham/Development/dative-dist-2020-07-20/dative/dist/.
-          Instead of the above command, run::
-              rm -rf src/dative/dist/
-              cp -r /Users/joeldunham/Development/dative-dist-2020-07-20/dative/dist \
-                  src/dative/dist
+    (venv3.6.5)$ pip install -r requirements.txt
 
-Install the `BeeWare`_ suite, the OLD's requirements, and the OLD
-itself in development mode using either the following make rule::
+.. warning:: At present (2021-01-31), Toga's WebView does not accept keyboard
+   input. To resolve this, you must manually modify
+   venv3.6.5/lib/python3.6/site-packages/toga_cocoa/widgets/webview.py by adding
+   the following import and modifying the referenced method as shown below::
 
-    (venv) $ make install
+       from rubicon.objc import objc_method, py_from_ns, send_super
+       @objc_method
+       def keyDown_(self, event) -> None:
+           if self.interface.on_key_down:
+               self.interface.on_key_down(self.interface, **toga_key(event))
+           send_super(__class__, self, 'keyDown:', event)
 
-or these separate ``pip install`` commands::
+Install the OLD's requirements and the OLD itself in development mode::
 
-    (venv) $ pip install -r requirements.txt
-    (venv) $ pip install -r src/old/requirements/testsqlite.txt
-    (venv) $ pip install -e src/old/
-    (venv) $ pip install -e src/dativetop/server/dativetopserver/
+    (venv3.6.5)$ pip install -r src/old/requirements/testsqlite.txt
+    (venv3.6.5)$ pip install -e src/old/
+
+Install the DativeTop Server's Python dependencies::
+
+    (venv3.6.5)$ pip install -e src/dativetop/server/
+		(venv3.6.5)$ pip install requirements/wheels/dativetop_append_only_log_domain_model-0.0.1-py3-none-any.whl
 
 Create the filesystem structure and (SQLite) database for a local OLD named
 "myold"::
 
-    (venv) $ make create-old-instance OLD_NAME=myold
+    (venv3.6.5)$ make create-old-instance OLD_NAME=myold
 
 The above command will create the OLD's SQLite file and its filesystem
 structure under ``./oldinstances/``:
@@ -129,12 +124,24 @@ structure under ``./oldinstances/``:
 - SQLite database file: ``oldinstances/dbs/myold.sqlite``
 - OLD directory for saving, e.g., audio, files: ``oldinstances/myold/``
 
+The SQLite db can be accessed as follows::
+
+    (venv)$ sqlite3 oldinstances/dbs/myold.sqlite
+
+The ``create-old-instance`` command above tells Dative about the new OLD by
+adding an object to the array defined in::
+
+    src/dative/dist/servers.json
+
 The ``create-old-instance`` command also tells Dative that there is an OLD
 instance being served, in this case, at http://127.0.0.1:5679/myold/.
 
 You should now be able to launch DativeTop with the following command::
 
-    $ make launch
+    $ briefcase dev
+
+TODO: return here. The DativeTop launched via the above is not yet at basic
+functionality.
 
 The above command should open DativeTop in a native window for your platform.
 That window will display a WebView wherein Dative should be running. You should
@@ -288,6 +295,66 @@ Warning seemingly from Mac OS:
 
     2020-07-30 11:14:23.303 python[45386:5039192] *** WARNING: Method convertPointToBase: in class NSView is deprecated on 10.7 and later. It should not be used in new applications.
 
+
+Build on Windows
+================================================================================
+
+Strategy 1: Use an Azure Windows Server 2019 Free Instance (2020-10)
+--------------------------------------------------------------------------------
+
+First, install Git and Python 3.6 using the pre-built installers available on
+GitHub. Then open PowerShell and run the following commands.
+
+Create a dev directory if you do not have one already::
+
+    > cd ~
+    > mkdir Development
+    > cd Development
+
+Clone the DativeTop source code, check out the current dev branch, and clone the submodules::
+
+    > git clone https://github.com/dativebase/dativetop.git
+    > cd dativetop
+    > git fetch origin -a
+    > git checkout -b dev/build-on-windows origin/dev/build-on-windows
+    > git submodule update --init --recursive
+
+Make note of the location of Python and Pip. In my case, given the default
+install using the Python .exe installer, they were at::
+
+    > C:\Users\jrwdunham\AppData\Local\Programs\Python\Python36\python.exe
+    > C:\Users\jrwdunham\AppData\Local\Programs\Python\Python36\Scripts\pip.exe
+
+Create the virtual environment using ``venv``::
+
+    > C:\Users\jrwdunham\AppData\Local\Programs\Python\Python36\python.exe -m venv C:\Users\jrwdunham\Development\venv
+
+Activate the venv::
+
+    > cd ~\Development
+    > .\venv\Scripts\Activate.ps1
+    (venv)>
+
+Extract the pre-build Dative and move it to ``src/dative/dist/``::
+
+    (venv)> cd dativetop\src\dative\releases
+    (venv)> tar -xvzf release-2c18bdf158fc8664404e67e5530b9a95a18d6d11.tar.gz
+    (venv)> mv release-2c18bdf158fc8664404e67e5530b9a95a18d6d11 ..\dist
+    (venv)> cd ~\Development\dativetop
+
+Install DativeTop's Python dependencies::
+
+    (venv)> pip3 install -r requirements.txt
+    (venv)> pip3 install -r src/old/requirements/testsqlite.txt
+		(venv)> pip3 install -e src/old/
+		(venv)> pip3 install -e src/dativetop/server/
+		(venv)> pip3 install requirements/wheels/dativetop_append_only_log_domain_model-0.0.1-py3-none-any.whl
+
+Initialize an OLD named ``testold``::
+
+    (venv)> initialize_old src\old\configlocal.ini myold
+
+Launch DativeTop::
 
 .. _`DativeTop cannot upload files`: https://github.com/dativebase/dativebase/issues/16
 .. _`DativeBase`: https://github.com/dativebase/dativebase

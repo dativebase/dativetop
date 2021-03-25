@@ -18,12 +18,13 @@ def _fork_server_process(ip, port, root_path, config='config.ini'):
     process.
     """
     os.chdir(root_path)
-    cmd = shlex.split(
+    cmd = (
         f'pserve'
         f' --reload'
         f' {config}'
         f' http_port={port}'
         f' http_host={ip}')
+    cmd = shlex.split(cmd)
     # FIXME: this is still needed in a built (e.g., DativeTop.app) app...
     # './../../../python/bin/pserve'
     return subprocess.Popen(cmd,

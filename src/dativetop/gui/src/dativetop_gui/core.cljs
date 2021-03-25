@@ -81,7 +81,7 @@
        (println "DB is clean and tidy, polling server state")
        (println "httpxhrio map:")
        (println (get-server-state-map db))
-       ;; (pprint/pprint (keys db))
+       #_(pprint/pprint (keys db))
        {:db db
         :http-xhrio (-> (get-server-state-map db)
                         (assoc :on-success [:poll-server-state-success])
@@ -119,7 +119,7 @@
  :poll-server-state-success-FART
  (fn [{aol :aol server-aol :server-aol :as db} [_ server-sfx]]
    (let [[updated-aol err] (if (seq server-sfx)
-                             (aol/merge-aols new-server-aol aol)
+                             (aol/merge-aols server-aol aol)
                              [aol nil])
          domain-entities (aol/aol-to-domain-entities updated-aol)]
      ;; (pprint/pprint domain-entities)
@@ -127,7 +127,7 @@
      (merge db
             domain-entities
             {:aol updated-aol
-             :server-aol new-server-aol}))))
+             :server-aol server-aol}))))
 
 ;; :server-aol is ALWAYS a prefix of, or identical to, the true server-side AOL
 ;; :aol MAY branch off of :server-aol; it is merged back in via a
@@ -135,7 +135,7 @@
 
 (defn merge-server-state [{aol :aol server-aol :server-aol :as db} [_ server-sfx]]
   (let [[updated-aol err] (if (seq server-sfx)
-                            (aol/merge-aols new-server-aol aol)
+                            (aol/merge-aols server-aol aol)
                             [aol nil])
         domain-entities (aol/aol-to-domain-entities updated-aol)]
     ;; (pprint/pprint domain-entities)
@@ -143,7 +143,7 @@
     (merge db
            domain-entities
            {:aol updated-aol
-            :server-aol new-server-aol})))
+            :server-aol server-aol})))
 
 (rf/reg-event-db :poll-server-state-success merge-server-state)
 

@@ -15,6 +15,9 @@ export DFLT_DATIVETOP_OLD_NAME = myold
 export DFLT_DATIVETOP_OLD_DIR_PATH = ${OLD_PERMANENT_STORE}/${DFLT_DATIVETOP_OLD_NAME}
 export DFLT_DATIVETOP_OLD_DB_PATH = ${OLD_DB_DIRPATH}/${DFLT_DATIVETOP_OLD_NAME}.sqlite
 
+create-old-instance-simple:
+	initialize_old ${DATIVETOP_OLD_SRC}/config.ini $(OLD_NAME)
+
 create-old-instance:  ## Create an OLD instance named OLD_NAME: create a directory structure for it, an SQLite database with tables pre-populated, and register it with Dative
 	initialize_old ${DATIVETOP_OLD_SRC}/config.ini $(OLD_NAME); \
 		DATIVETOP_OLD_PORT=${DATIVETOP_OLD_PORT} \

@@ -3,7 +3,7 @@
 
 import pytest
 
-import dativetop.domain as domain
+import dativetopserver.domain as domain
 import tests.utils as utils
 
 

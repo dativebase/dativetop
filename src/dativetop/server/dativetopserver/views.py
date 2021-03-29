@@ -7,13 +7,6 @@ import sys
 from wsgiref.simple_server import make_server
 from pyramid.config import Configurator
 
-# import dativetopserver.aol as aol
-import dtaoldm.aol as aol_mod
-
-
-AOL_PATH = 'aol.txt'
-
-
 logging_config = dict(
     version=1,
     formatters={

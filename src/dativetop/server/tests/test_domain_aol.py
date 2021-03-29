@@ -1,8 +1,8 @@
 """Tests for storing domain entities in the append-only log
 """
 
-import dativetop.domain as domain
-import dativetop.aol as aol_mod
+import dativetopserver.domain as domain
+import dativetopserver.aol as aol_mod
 
 
 def generate_test_aol():

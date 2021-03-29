@@ -4,7 +4,7 @@
 import os
 from pathlib import Path
 
-import dativetop.aol as aol_mod
+import dativetopserver.aol as aol_mod
 import tests.utils as utils
 
 

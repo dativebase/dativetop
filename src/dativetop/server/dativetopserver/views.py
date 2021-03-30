@@ -3,6 +3,7 @@ import logging
 from logging.config import dictConfig
 import pprint
 import sys
+from urllib.parse import urlparse
 
 from wsgiref.simple_server import make_server
 from pyramid.config import Configurator
@@ -95,6 +96,26 @@ def append_only_log(request):
     return {'error': 'Only GET and PUT requests are permitted.'}
 
 
+def validate_old_service_url(url):
+    parsed = urlparse(url.rstrip('/'))
+    if not parsed.port:
+        return 'no port'
+    allowed_hostnames = ['localhost', '127.0.0.1']
+    if parsed.hostname not in allowed_hostnames:
+        return 'hostname invalid; only {} are permitted'.format(
+            ', '.join(allowed_hostnames))
+    if parsed.scheme != 'http':
+        return 'scheme is not http'
+    if parsed.path:
+        return 'path is not empty'
+    if parsed.params:
+        return 'params is not empty'
+    if parsed.query:
+        return 'query is not empty'
+    if parsed.fragment:
+        return 'fragment is not empty'
+
+
 def update_old_service(request):
     """Update the (URL of the) OLD Service."""
     logger.info('Updating the OLD Service')
@@ -114,7 +135,14 @@ def update_old_service(request):
     if url is None:
         request.response.status = 400
         return {'error': 'No OLD service URL in request body'}
-    updated_old_service = m.update_old_service(url)
+    if not isinstance(url, str):
+        request.response.status = 400
+        return {'error': 'URL must be a string'}
+    validation_error = validate_old_service_url(url)
+    if validation_error:
+        request.response.status = 400
+        return {'error': validation_error}
+    updated_old_service = m.update_old_service(url.rstrip('/'))
     return m.serialize_old_service(updated_old_service)
 
 

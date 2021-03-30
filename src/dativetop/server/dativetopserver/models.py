@@ -77,7 +77,7 @@ class OLD(Base):
     __tablename__ = 'old'
     uuid = Column(String(length=36), primary_key=True, default=gen_uuid)
     history_id = Column(String(length=36), default=gen_uuid, index=True)
-    # unique among OLD instances at a given OLDService.url, e.g., "oka"
+    # suffixed to the URL of the local OLDService.url, e.g., "oka"
     slug = Column(Unicode(length=256), nullable=False, index=True)
     # human readable name, e.g., "Okanagan"
     name = Column(Unicode(length=256), nullable=False)
@@ -144,6 +144,11 @@ def update_dative_app(url):
 DEFAULT_OLD_SERVICE_URL = 'http://127.0.0.1:5679'
 
 
+def serialize_old_service(old_service):
+    return {'id': old_service.history_id,
+            'url': old_service.url}
+
+
 def get_old_service():
     now = get_now()
     try:
@@ -151,7 +156,8 @@ def get_old_service():
     except NoResultFound:
         pass
     except MultipleResultsFound:
-        for old_service in DBSession.query(OLDService).filter(OLDService.end > now).all():
+        for old_service in DBSession.query(OLDService).filter(
+                OLDService.end > now).all():
             old_service.end = now
             DBSession.add(old_service)
     old_service = OLDService(url=DEFAULT_OLD_SERVICE_URL)

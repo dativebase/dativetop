@@ -7,6 +7,8 @@ import sys
 from wsgiref.simple_server import make_server
 from pyramid.config import Configurator
 
+import dativetopserver.models as m
+
 logging_config = dict(
     version=1,
     formatters={
@@ -93,6 +95,42 @@ def append_only_log(request):
     return {'error': 'Only GET and PUT requests are permitted.'}
 
 
+def update_old_service(request):
+    """Update the (URL of the) OLD Service."""
+    logger.info('Updating the OLD Service')
+    try:
+        payload = request.json_body
+    except json.decoder.JSONDecodeError:
+        logger.exception(
+            'Exception raised when attempting to get JSON from the request'
+            ' body.')
+        request.response.status = 400
+        return {'error': 'Bad JSON in request body'}
+    logger.info('DativeTop Server: received payload of type %s in'
+                ' PUT /old_service.', type(payload))
+    url = None
+    if isinstance(payload, dict):
+        url = payload.get('url')
+    if url is None:
+        request.response.status = 400
+        return {'error': 'No OLD service URL in request body'}
+    updated_old_service = m.update_old_service(url)
+    return m.serialize_old_service(updated_old_service)
+
+
+def get_old_service(request):
+    logger.info('Getting the OLD Service')
+    return m.serialize_old_service(m.get_old_service())
+
+
+def old_service(request):
+    if request.method == 'PUT':
+        return update_old_service(request)
+    if request.method == 'GET':
+        return get_old_service(request)
+    request.response.status = 405
+    return {'error': 'The old_service only recognizes GET and PUT requests.'}
+
 def get_ip_port():
     args = sys.argv
     ip = '127.0.0.1'
@@ -108,10 +146,17 @@ def main(ip, port):
     config = Configurator()
     config.include('cors')
     config.add_cors_preflight_handler()
+
+    config.add_route('old-service', '/old_service')
+    config.add_view(old_service,
+                    route_name='old-service',
+                    renderer='json')
+
     config.add_route('append-only-log', '/')
     config.add_view(append_only_log,
                     route_name='append-only-log',
                     renderer='json')
+
     app = config.make_wsgi_app()
     logger.info(f'Serving at http://{ip}:{port}/')
     server = make_server(ip, port, app)

@@ -49,6 +49,11 @@ class ViewsTests(unittest.TestCase):
         old_service_rows = self.session.query(m.OLDService).all()
         self.assertEqual(3, len(old_service_rows))
         self.assertEqual(1, len(set([os.history_id for os in old_service_rows])))
+        request = testing.DummyRequest(
+            json_body={'url': m.get_dative_app().url}, method='PUT')
+        response = v.old_service(request)
+        self.assertEqual('OLD Service URL must be different from Dative App URL',
+                         response['error'])
 
     def test_dative_app_api(self):
         import dativetopserver.views as v
@@ -76,6 +81,12 @@ class ViewsTests(unittest.TestCase):
         dative_app_rows = self.session.query(m.DativeApp).all()
         self.assertEqual(3, len(dative_app_rows))
         self.assertEqual(1, len(set([os.history_id for os in dative_app_rows])))
+        request = testing.DummyRequest(
+            json_body={'url': m.get_old_service().url}, method='PUT')
+        response = v.dative_app(request)
+        self.assertEqual('Dative App URL must be different from OLD Service URL',
+                         response['error'])
+
 
     def test_local_url_validation(self):
         import dativetopserver.views as v

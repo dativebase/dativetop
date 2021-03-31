@@ -147,7 +147,11 @@ def update_old_service(request):
     if validation_error:
         request.response.status = 400
         return {'error': validation_error}
-    updated_old_service = m.update_old_service(url.rstrip('/'))
+    url = url.rstrip('/')
+    dative_app_url = m.get_dative_app().url.rstrip('/')
+    if url == dative_app_url:
+        return {'error': 'OLD Service URL must be different from Dative App URL'}
+    updated_old_service = m.update_old_service(url)
     return m.serialize_old_service(updated_old_service)
 
 
@@ -192,7 +196,11 @@ def update_dative_app(request):
     if validation_error:
         request.response.status = 400
         return {'error': validation_error}
-    updated_dative_app = m.update_dative_app(url.rstrip('/'))
+    url = url.rstrip('/')
+    old_service_url = m.get_old_service().url.rstrip('/')
+    if url == old_service_url:
+        return {'error': 'Dative App URL must be different from OLD Service URL'}
+    updated_dative_app = m.update_dative_app(url)
     return m.serialize_dative_app(updated_dative_app)
 
 

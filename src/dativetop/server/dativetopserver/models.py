@@ -110,6 +110,11 @@ class SyncOLDCommand(Base):
 DEFAULT_DATIVE_APP_URL = 'http://127.0.0.1:5678'
 
 
+def serialize_dative_app(dative_app):
+    return {'id': dative_app.history_id,
+            'url': dative_app.url}
+
+
 def get_dative_app():
     now = get_now()
     try:

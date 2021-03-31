@@ -96,7 +96,7 @@ def append_only_log(request):
     return {'error': 'Only GET and PUT requests are permitted.'}
 
 
-def validate_old_service_url(url):
+def validate_local_url(url):
     parsed = urlparse(url.rstrip('/'))
     if not parsed.port:
         return 'no port'
@@ -114,6 +114,11 @@ def validate_old_service_url(url):
         return 'query is not empty'
     if parsed.fragment:
         return 'fragment is not empty'
+
+
+validate_old_service_url = validate_local_url
+
+validate_dative_app_url = validate_local_url
 
 
 def update_old_service(request):
@@ -157,7 +162,54 @@ def old_service(request):
     if request.method == 'GET':
         return get_old_service(request)
     request.response.status = 405
-    return {'error': 'The old_service only recognizes GET and PUT requests.'}
+    return {'error': ('The old_service endpoint only recognizes GET and PUT'
+                      ' requests.')}
+
+
+def update_dative_app(request):
+    """Update the (URL of the) Dative App."""
+    logger.info('Updating the Dative App')
+    try:
+        payload = request.json_body
+    except json.decoder.JSONDecodeError:
+        logger.exception(
+            'Exception raised when attempting to get JSON from the request'
+            ' body.')
+        request.response.status = 400
+        return {'error': 'Bad JSON in request body'}
+    logger.info('DativeTop Server: received payload of type %s in'
+                ' PUT /dative_app.', type(payload))
+    url = None
+    if isinstance(payload, dict):
+        url = payload.get('url')
+    if url is None:
+        request.response.status = 400
+        return {'error': 'No Dative app URL in request body'}
+    if not isinstance(url, str):
+        request.response.status = 400
+        return {'error': 'URL must be a string'}
+    validation_error = validate_dative_app_url(url)
+    if validation_error:
+        request.response.status = 400
+        return {'error': validation_error}
+    updated_dative_app = m.update_dative_app(url.rstrip('/'))
+    return m.serialize_dative_app(updated_dative_app)
+
+
+def get_dative_app(request):
+    logger.info('Getting the Dative App')
+    return m.serialize_dative_app(m.get_dative_app())
+
+
+def dative_app(request):
+    if request.method == 'PUT':
+        return update_dative_app(request)
+    if request.method == 'GET':
+        return get_dative_app(request)
+    request.response.status = 405
+    return {'error': ('The dative_app endpoint only recognizes GET and PUT'
+                      ' requests.')}
+
 
 def get_ip_port():
     args = sys.argv

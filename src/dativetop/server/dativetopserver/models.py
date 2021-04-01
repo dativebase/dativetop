@@ -37,6 +37,10 @@ register(DBSession)
 Base = declarative_base()
 
 
+class DTValueError(ValueError):
+    pass
+
+
 def gen_uuid():
     return str(uuid4())
 
@@ -54,6 +58,12 @@ old_state = namedtuple(
     )
 )(*range(4))
 
+old_state_transitions = {
+    old_state.not_synced: [old_state.syncing],
+    old_state.syncing: [old_state.synced, old_state.failed_to_sync],
+    old_state.synced: [old_state.not_synced],
+    old_state.failed_to_sync: [old_state.not_synced]
+}
 
 class DativeApp(Base):
     __tablename__ = 'dativeapp'
@@ -186,13 +196,26 @@ def update_old_service(url):
 
 # OLD helper functions
 
+def serialize_old(old):
+    return {
+        'id': old.history_id,
+        'slug': old.slug,
+        'name': old.name,
+        'leader': old.leader,
+        'username': old.username,
+        'password': old.password,
+        'state': old_state._fields[old.state],
+        'is_auto_syncing': old.is_auto_syncing
+    }
+
+
 def create_old(slug, name=None, leader=None, username=None, password=None,
                is_auto_syncing=False):
     existing_old = DBSession.query(OLD).filter(
         OLD.slug == slug,
         OLD.end > get_now()).first()
     if existing_old:
-        raise ValueError('Slug already in use')
+        raise DTValueError('Slug already in use')
     name = name or slug
     old = OLD(slug=slug,
               name=name,
@@ -208,7 +231,7 @@ def create_old(slug, name=None, leader=None, username=None, password=None,
 def update_old(old, **kwargs):
     now = get_now()
     if old.end < now:
-        raise ValueError('Cannot update an inactive OLD')
+        raise DTValueError('Cannot update an inactive OLD')
     old.end = now
     new_kwargs = {'history_id': old.history_id,
                   'start': now}
@@ -225,7 +248,7 @@ def update_old(old, **kwargs):
 def transition_old(old, state):
     now = get_now()
     if old.end < now:
-        raise ValueError('Cannot transition an inactive OLD')
+        raise DTValueError('Cannot transition an inactive OLD')
     old.end = now
     new_kwargs = {'history_id': old.history_id,
                   'start': now,

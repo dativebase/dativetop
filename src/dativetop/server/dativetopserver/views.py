@@ -1,12 +1,12 @@
 import json
 import logging
 from logging.config import dictConfig
-import pprint
 import sys
 from urllib.parse import urlparse
 
-from wsgiref.simple_server import make_server
 from pyramid.config import Configurator
+from sqlalchemy.orm.exc import NoResultFound
+from wsgiref.simple_server import make_server
 
 import dativetopserver.models as m
 
@@ -115,11 +115,9 @@ def validate_local_url(url):
     if parsed.fragment:
         return 'fragment is not empty'
 
+# /old_service endpoint
 
 validate_old_service_url = validate_local_url
-
-validate_dative_app_url = validate_local_url
-
 
 def update_old_service(request):
     """Update the (URL of the) OLD Service."""
@@ -166,9 +164,12 @@ def old_service(request):
     if request.method == 'GET':
         return get_old_service(request)
     request.response.status = 405
-    return {'error': ('The old_service endpoint only recognizes GET and PUT'
+    return {'error': ('The /old_service endpoint only recognizes GET and PUT'
                       ' requests.')}
 
+# /dative_app endpoint
+
+validate_dative_app_url = validate_local_url
 
 def update_dative_app(request):
     """Update the (URL of the) Dative App."""
@@ -215,7 +216,198 @@ def dative_app(request):
     if request.method == 'GET':
         return get_dative_app(request)
     request.response.status = 405
-    return {'error': ('The dative_app endpoint only recognizes GET and PUT'
+    return {'error': ('The /dative_app endpoint only recognizes GET and PUT'
+                      ' requests.')}
+
+
+def get_json_payload(request):
+    try:
+        return request.json_body, None
+    except json.decoder.JSONDecodeError:
+        logger.exception(
+            'Exception raised when attempting to get JSON from the request'
+            ' body.')
+        request.response.status = 400
+        return None, {'error': 'Bad JSON in request body'}
+
+
+def str_or_none(val):
+    if val is None:
+        return val
+    if isinstance(val, str):
+        return val
+    raise m.DTValueError('value must be a string')
+
+
+def boolean(val):
+    if isinstance(val, bool):
+        return val
+    raise m.DTValueError('value must be a boolean')
+
+
+def create_old(request):
+    payload, error = get_json_payload(request)
+    if error:
+        return error
+    slug = payload.get('slug')
+    if not slug:
+        return {'error': 'slug is required'}
+    try:
+        old = m.create_old(
+            slug,
+            name=str_or_none(payload.get('name')),
+            leader=str_or_none(payload.get('leader')),
+            username=str_or_none(payload.get('username')),
+            password=str_or_none(payload.get('password')),
+            is_auto_syncing=boolean(payload.get('is_auto_syncing', False)))
+    except m.DTValueError as e:
+        request.response.status = 400
+        return {'error': str(e)}
+    except Exception:
+        request.response.status = 500
+        return {'error': 'Internal server error'}
+    request.response.status = 201
+    return m.serialize_old(old)
+
+
+# Read OLDS (DTGUI)
+# WARNING: no pagination
+def read_olds(request):
+    return [m.serialize_old(old) for old in m.get_olds()]
+
+
+def read_old(request):
+    old_id = request.matchdict['old_id']
+    try:
+        old = m.get_old(old_id)
+    except NoResultFound:
+        request.response.status = 404
+        return {'error': 'No OLD with supplied ID'}
+    return m.serialize_old(old)
+
+
+def update_old(request):
+    old_id = request.matchdict['old_id']
+    try:
+        old = m.get_old(old_id)
+    except NoResultFound:
+        request.response.status = 404
+        return {'error': 'No OLD with supplied ID'}
+    payload, error = get_json_payload(request)
+    if error:
+        return error
+    # Cannot update slug (for now, too complicated)
+    try:
+        payload = {
+            'name': str_or_none(payload.get('name', old.name)),
+            'leader': str_or_none(payload.get('leader', old.leader)),
+            'username': str_or_none(payload.get('username', old.username)),
+            'password': str_or_none(payload.get('password', old.password)),
+            'is_auto_syncing': boolean(payload.get('is_auto_syncing',
+                                                   old.is_auto_syncing))}
+        if payload == {attr:getattr(old, attr) for attr in payload}:
+            updated_old = old
+        else:
+            updated_old = m.update_old(old, **payload)
+    except m.DTValueError as e:
+        request.response.status = 400
+        return {'error': str(e)}
+    except Exception:
+        request.response.status = 500
+        return {'error': 'Internal server error'}
+    request.response.status = 200
+    return m.serialize_old(updated_old)
+
+
+def validate_old_state(old_state):
+    if old_state is None:
+        return None, 'state must be supplied'
+    try:
+        return getattr(m.old_state, old_state), None
+    except (AttributeError, TypeError):
+        return None, 'state must be one of {}'.format(
+            ', '.join(m.old_state._asdict().keys()))
+
+
+def validate_state_transition(old_state, new_state):
+    if new_state in m.old_state_transitions[old_state]:
+        return new_state, None
+    return None, 'illegal state transition'
+
+
+def transition_old_state(request):
+    old_id = request.matchdict['old_id']
+    try:
+        old = m.get_old(old_id)
+    except NoResultFound:
+        request.response.status = 404
+        return {'error': 'No OLD with supplied ID'}
+    payload, error = get_json_payload(request)
+    if error:
+        return error
+    try:
+        new_state, error = validate_old_state(payload.get('state'))
+        if error:
+            return {'error': error}
+        if new_state == old.state:
+            updated_old = old
+        else:
+            new_state, error = validate_state_transition(old.state, new_state)
+            if error:
+                return {'error': error}
+            updated_old = m.update_old(old, state=new_state)
+    except m.DTValueError as e:
+        request.response.status = 400
+        return {'error': str(e)}
+    except Exception:
+        request.response.status = 500
+        return {'error': 'Internal server error'}
+    request.response.status = 200
+    return m.serialize_old(updated_old)
+
+
+def delete_old(request):
+    old_id = request.matchdict['old_id']
+    try:
+        old = m.get_old(old_id)
+    except NoResultFound:
+        request.response.status = 404
+        return {'error': 'No OLD with supplied ID'}
+    deleted_old = m.delete_old(old)
+    return deleted_old
+
+
+# /olds endpoint
+def olds(request):
+    if request.method == 'POST':
+        return create_old(request)
+    if request.method == 'GET':
+        return read_olds(request)
+    request.response.status = 405
+    return {'error': ('The /olds endpoint only recognizes GET and POST'
+                      ' requests.')}
+
+
+# /olds/{old_id} endpoint
+def old(request):
+    if request.method == 'GET':
+        return read_old(request)
+    if request.method == 'PUT':
+        return update_old(request)
+    # TODO: this implies work to delete the OLD.
+    if request.method == 'DELETE':
+        return delete_old(request)
+    request.response.status = 405
+    return {'error': ('The /olds/{old_id} endpoint only recognizes GET, PUT and'
+                      ' DELETE requests.')}
+
+
+# /olds/{old_id}/state endpoint
+def old_state(request):
+    if request.method == 'PUT':
+        return transition_old_state(request)
+    request.response.status = 405
+    return {'error': ('The /olds/{old_id}/statue endpoint only recognizes PUT'
                       ' requests.')}
 
 
@@ -238,6 +430,26 @@ def main(ip, port):
     config.add_route('old-service', '/old_service')
     config.add_view(old_service,
                     route_name='old-service',
+                    renderer='json')
+
+    config.add_route('dative-app', '/dative_app')
+    config.add_view(dative_app,
+                    route_name='dative-app',
+                    renderer='json')
+
+    config.add_route('olds', '/olds')
+    config.add_view(olds,
+                    route_name='olds',
+                    renderer='json')
+
+    config.add_route('old_state', '/olds/{old_id}/state')
+    config.add_view(old_state,
+                    route_name='old_state',
+                    renderer='json')
+
+    config.add_route('old', '/olds/{old_id}')
+    config.add_view(old,
+                    route_name='old',
                     renderer='json')
 
     config.add_route('append-only-log', '/')

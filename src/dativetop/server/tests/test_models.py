@@ -122,7 +122,7 @@ class ModelsTests(unittest.TestCase):
         try:
             m.create_old(new_old2.slug)
         except Exception as e:
-            self.assertIsInstance(e, ValueError)
+            self.assertIsInstance(e, m.DTValueError)
 
         # Delete the second OLD
         deleted_old2 = m.delete_old(new_old2)
@@ -153,7 +153,7 @@ class ModelsTests(unittest.TestCase):
         try:
             m.transition_old(blaold_synced, m.old_state.not_synced)
         except Exception as e:
-            self.assertIsInstance(e, ValueError)
+            self.assertIsInstance(e, m.DTValueError)
 
         # Transition a new OLD through a "sync failed" flow
         zinc_old = m.create_old('zinc')

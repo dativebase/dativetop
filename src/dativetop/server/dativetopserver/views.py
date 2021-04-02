@@ -407,8 +407,78 @@ def old_state(request):
     if request.method == 'PUT':
         return transition_old_state(request)
     request.response.status = 405
-    return {'error': ('The /olds/{old_id}/statue endpoint only recognizes PUT'
+    return {'error': ('The /olds/{old_id}/state endpoint only recognizes PUT'
                       ' requests.')}
+
+
+# OLDSyncCommand API:
+# Enqueue:  POST /sync_old_commands
+# Pop:      PUT  /sync_old_commands
+# Read:     GET  /sync_old_commands/{id}
+# Complete: PUT  /sync_old_commands/{id}
+
+def enqueue_command(request):
+    payload, error = get_json_payload(request)
+    if error:
+        return error
+    old_id = payload.get('old_id')
+    if not old_id:
+        request.response.status = 400
+        return {'error': 'OLD ID is required'}
+    try:
+        old = m.get_old(old_id)
+    except NoResultFound:
+        request.response.status = 404
+        return {'error': 'No OLD with supplied ID'}
+    return m.serialize_sync_old_command(m.enqueue_sync_old_command(old_id))
+
+
+def pop_command(request):
+    command = m.pop_sync_old_command()
+    if not command:
+        request.response.status = 404
+        return {'error': 'No commands on the queue'}
+    return m.serialize_sync_old_command(command)
+
+
+def read_command(request):
+    command_id = request.matchdict['command_id']
+    try:
+        command = m.get_sync_old_command(command_id)
+    except NoResultFound:
+        request.response.status = 404
+        return {'error': 'No command with supplied ID'}
+    return m.serialize_sync_old_command(command)
+
+
+def complete_command(request):
+    command_id = request.matchdict['command_id']
+    try:
+        command = m.complete_sync_old_command(command_id)
+    except NoResultFound:
+        request.response.status = 404
+        return {'error': 'No acked command with supplied ID'}
+    return m.serialize_sync_old_command(command)
+
+
+def sync_old_commands(request):
+    if request.method == 'POST':
+        return enqueue_command(request)
+    if request.method == 'PUT':
+        return pop_command(request)
+    request.response.status = 405
+    return {'error': ('The /sync_old_commands endpoint only recognizes POST'
+                      ' and PUT requests.')}
+
+
+def sync_old_command(request):
+    if request.method == 'GET':
+        return read_command(request)
+    if request.method == 'DELETE':
+        return complete_command(request)
+    request.response.status = 405
+    return {'error': ('The /sync_old_command/{id} endpoint only recognizes GET'
+                      ' and DELETE requests.')}
 
 
 def get_ip_port():
@@ -437,11 +507,6 @@ def main(ip, port):
                     route_name='dative-app',
                     renderer='json')
 
-    config.add_route('olds', '/olds')
-    config.add_view(olds,
-                    route_name='olds',
-                    renderer='json')
-
     config.add_route('old_state', '/olds/{old_id}/state')
     config.add_view(old_state,
                     route_name='old_state',
@@ -450,6 +515,21 @@ def main(ip, port):
     config.add_route('old', '/olds/{old_id}')
     config.add_view(old,
                     route_name='old',
+                    renderer='json')
+
+    config.add_route('olds', '/olds')
+    config.add_view(olds,
+                    route_name='olds',
+                    renderer='json')
+
+    config.add_route('sync_old_command', '/sync_old_commands/{command_id}')
+    config.add_view(sync_old_command,
+                    route_name='sync_old_command',
+                    renderer='json')
+
+    config.add_route('sync_old_commands', '/sync_old_commands')
+    config.add_view(sync_old_commands,
+                    route_name='sync_old_commands',
                     renderer='json')
 
     config.add_route('append-only-log', '/')

@@ -1,3 +1,4 @@
+import pprint
 import transaction
 import unittest
 from uuid import uuid4
@@ -110,7 +111,7 @@ class ViewsTests(unittest.TestCase):
         self.assertIsNone(v.validate_local_url('http://localhost:5678'))
 
 
-    def test_create_old(self):
+    def test_old_api(self):
         import dativetopserver.views as v
         import dativetopserver.models as m
         self.assertEqual([], self.session.query(m.OLD).all())
@@ -261,3 +262,107 @@ class ViewsTests(unittest.TestCase):
                            self.session.query(m.OLD).filter(
                                m.OLD.history_id == old_id).order_by(
                                    desc(m.OLD.start)).first().end)
+
+    def test_sync_old_command_api(self):
+        import dativetopserver.views as v
+        import dativetopserver.models as m
+
+        # try to pop a command from an empty queue
+        request = testing.DummyRequest(method='PUT')
+        response = v.sync_old_commands(request)
+        self.assertEqual('No commands on the queue', response['error'])
+
+        # try to enqueue a command for a non-existent OLD
+        request = testing.DummyRequest(method='POST', json_body={'old_id': 'abc'})
+        response = v.sync_old_commands(request)
+        self.assertEqual('No OLD with supplied ID', response['error'])
+        request = testing.DummyRequest(method='POST', json_body={})
+        response = v.sync_old_commands(request)
+        self.assertEqual('OLD ID is required', response['error'])
+
+        # Create some OLDs
+        bla = v.olds(testing.DummyRequest(
+            method='POST', json_body= {
+                'slug': 'bla',
+                'name': 'Blackfoot',
+                'leader': 'https://do.old.org/bla',
+                'username': 'someuser',
+                'password': 'somepassword',
+                'is_auto_syncing': True}))
+        oka = v.olds(testing.DummyRequest(
+            method='POST', json_body= {
+                'slug': 'oka',
+                'name': 'Okanagan',
+                'leader': 'https://do.old.org/oka',
+                'username': 'someuser',
+                'password': 'somepassword',
+                'is_auto_syncing': True}))
+        fra = v.olds(testing.DummyRequest(
+            method='POST', json_body= {
+                'slug': 'fra',
+                'name': 'French',
+                'leader': 'https://do.old.org/fra',
+                'username': 'someuser',
+                'password': 'somepassword',
+                'is_auto_syncing': True}))
+        self.assertEqual(3, len(v.olds(testing.DummyRequest(method='GET'))))
+
+        # Create 3 commands, confirm they're un-acked
+        bla_cmd = v.sync_old_commands(testing.DummyRequest(
+            method='POST', json_body={'old_id': bla['id']}))
+        oka_cmd = v.sync_old_commands(testing.DummyRequest(
+            method='POST', json_body={'old_id': oka['id']}))
+        fra_cmd = v.sync_old_commands(testing.DummyRequest(
+            method='POST', json_body={'old_id': fra['id']}))
+        self.assertEqual(bla['id'], bla_cmd['old_id'])
+        self.assertFalse(bla_cmd['acked'])
+        self.assertEqual(oka['id'], oka_cmd['old_id'])
+        self.assertFalse(oka_cmd['acked'])
+        self.assertEqual(fra['id'], fra_cmd['old_id'])
+        self.assertFalse(fra_cmd['acked'])
+
+        # Attempting to create a command for an OLD that already has one will
+        # return the existing command
+        new_bla_cmd = v.sync_old_commands(testing.DummyRequest(
+            method='POST', json_body={'old_id': bla['id']}))
+        self.assertEqual(bla_cmd, new_bla_cmd)
+
+        # We can fetch the command idempotently, if we want:
+        fetched_bla_cmd = v.sync_old_command(testing.DummyRequest(
+            method='GET', matchdict={'command_id': bla_cmd['id']}))
+        self.assertEqual(bla_cmd, fetched_bla_cmd)
+
+        # The first command to pop will be bla
+        popped_bla = v.sync_old_commands(testing.DummyRequest(method='PUT'))
+        self.assertTrue(popped_bla['acked'])
+        self.assertEqual(popped_bla['old_id'], bla['id'])
+
+        # We can fetch the bla command after popping it
+        fetched_bla = v.sync_old_command(testing.DummyRequest(
+            method='GET', matchdict={'command_id': popped_bla['id']}))
+        self.assertEqual(fetched_bla, popped_bla)
+
+        # Can complete the acked/popped bla command
+        completed_bla = v.sync_old_command(testing.DummyRequest(
+            method='DELETE', matchdict={'command_id': popped_bla['id']}))
+        self.assertEqual(completed_bla, fetched_bla)
+
+        # We cannot fetch the bla command after completing it
+        fetched_completed_bla = v.sync_old_command(testing.DummyRequest(
+            method='GET', matchdict={'command_id': popped_bla['id']}))
+        self.assertEqual('No command with supplied ID',
+                         fetched_completed_bla['error'])
+
+        # The next command to pop will be oka
+        popped_oka = v.sync_old_commands(testing.DummyRequest(method='PUT'))
+        self.assertTrue(popped_oka['acked'])
+        self.assertEqual(popped_oka['old_id'], oka['id'])
+
+        # The next command to pop will be fra
+        popped_fra = v.sync_old_commands(testing.DummyRequest(method='PUT'))
+        self.assertTrue(popped_fra['acked'])
+        self.assertEqual(popped_fra['old_id'], fra['id'])
+
+        # Now the queue is empty
+        response = v.sync_old_commands(testing.DummyRequest(method='PUT'))
+        self.assertEqual('No commands on the queue', response['error'])

@@ -437,7 +437,7 @@ def pop_command(request):
     command = m.pop_sync_old_command()
     if not command:
         request.response.status = 404
-        return {'error': 'No commands on the queue'}
+        return {'error': 'No commands in the queue'}
     return m.serialize_sync_old_command(command)
 
 

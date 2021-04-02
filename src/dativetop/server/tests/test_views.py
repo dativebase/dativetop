@@ -1,4 +1,3 @@
-import pprint
 import transaction
 import unittest
 from uuid import uuid4
@@ -270,7 +269,7 @@ class ViewsTests(unittest.TestCase):
         # try to pop a command from an empty queue
         request = testing.DummyRequest(method='PUT')
         response = v.sync_old_commands(request)
-        self.assertEqual('No commands on the queue', response['error'])
+        self.assertEqual('No commands in the queue', response['error'])
 
         # try to enqueue a command for a non-existent OLD
         request = testing.DummyRequest(method='POST', json_body={'old_id': 'abc'})
@@ -365,4 +364,4 @@ class ViewsTests(unittest.TestCase):
 
         # Now the queue is empty
         response = v.sync_old_commands(testing.DummyRequest(method='PUT'))
-        self.assertEqual('No commands on the queue', response['error'])
+        self.assertEqual('No commands in the queue', response['error'])

@@ -412,10 +412,10 @@ def old_state(request):
 
 
 # OLDSyncCommand API:
-# Enqueue:  POST /sync_old_commands
-# Pop:      PUT  /sync_old_commands
-# Read:     GET  /sync_old_commands/{id}
-# Complete: PUT  /sync_old_commands/{id}
+# Enqueue:  POST   /sync_old_commands
+# Pop:      PUT    /sync_old_commands
+# Read:     GET    /sync_old_commands/{id}
+# Complete: DELETE /sync_old_commands/{id}
 
 def enqueue_command(request):
     payload, error = get_json_payload(request)

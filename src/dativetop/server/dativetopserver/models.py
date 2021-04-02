@@ -294,6 +294,12 @@ def get_olds():
 # acked:    c.acked = True  (active)
 # complete: c.end   < now
 
+def serialize_sync_old_command(sync_old_command):
+    return {'id': sync_old_command.history_id,
+            'old_id': sync_old_command.old_id,
+            'acked': sync_old_command.acked}
+
+
 def enqueue_sync_old_command(old_id):
     """Enqueue a sync-OLD! command."""
     now = get_now()

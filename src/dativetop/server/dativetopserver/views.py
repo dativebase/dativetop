@@ -73,29 +73,6 @@ def append_to_log(request):
     return []
 
 
-def get_append_only_log(request):
-    logger.info('MONKEYS!')
-    tip_hash = request.GET.get('head')
-    logger.info('Returning the AOL after hash %s', tip_hash)
-    aol = aol_mod.get_aol(AOL_PATH)
-    ret = aol_mod.get_new_appendables(aol, tip_hash)
-    logger.info('Returning AOL suffix of %s elements', len(ret))
-    return ret
-
-
-def append_only_log(request):
-    """Handle all requests. There is only one endpoint, the AOL root endoint at
-    /. Only 2 HTTP methods are accepted: PUT and GET. PUT is for appending, GET
-    is for reading.
-    """
-    if request.method == 'PUT':
-        return append_to_log(request)
-    if request.method == 'GET':
-        return get_append_only_log(request)
-    request.response.status = 405
-    return {'error': 'Only GET and PUT requests are permitted.'}
-
-
 def validate_local_url(url):
     parsed = urlparse(url.rstrip('/'))
     if not parsed.port:
@@ -530,11 +507,6 @@ def main(ip, port):
     config.add_route('sync_old_commands', '/sync_old_commands')
     config.add_view(sync_old_commands,
                     route_name='sync_old_commands',
-                    renderer='json')
-
-    config.add_route('append-only-log', '/')
-    config.add_view(append_only_log,
-                    route_name='append-only-log',
                     renderer='json')
 
     app = config.make_wsgi_app()

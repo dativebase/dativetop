@@ -16,6 +16,15 @@
             [dativetop-gui.aol :as aol]
             [dativetop-gui.aol-fiddle :as aol-fiddle]))
 
+;; -- Helpers & Data -----------------------------------------------------------
+
+(def default-db
+  {:dativetop-server {:url "http://127.0.0.1:4676"}
+   :dative-app {:url "http://127.0.0.1:5678"}
+   :old-service {:url "http://127.0.0.1:1111"}
+   :olds []
+   :new-old {:name "" :short-name "" :leader ""}})
+
 (defn new-old-valid?
   [new-old]
   false)
@@ -28,241 +37,104 @@
    :auto-sync? "8em"
    :actions "7em"})
 
-(defn fetch-data
-  []
-  nil)
+(defmulti url (fn [resource & _] resource))
+
+;; GET: fetch the OLD service
+;; PUT: update the URL of the OLD service
+(defmethod url :old-service [_ dtserver-url] (str dtserver-url "/old_service"))
+
+;; GET: fetch the Dative app
+;; PUT: update the URL of the Dative app
+(defmethod url :dative-app [_ dtserver-url] (str dtserver-url "/dative_app"))
+
+;; GET: fetch all of the OLDs
+;; POST: create a new OLD
+(defmethod url :olds [_ dtserver-url] (str dtserver-url "/olds"))
+
+;; GET: fetch a specific OLD
+;; PUT: update an OLD
+;; DELETE: delete an OLD
+(defmethod url :old [_ dtserver-url old-id] (str dtserver-url "/olds/" old-id))
+
+;; PUT: transition an OLD's state
+(defmethod url :old-state [_ dtserver-url old-id]
+  (str dtserver-url "/olds/" old-id "/state"))
+
+;; POST: enqueue a new command
+;; PUT: pop the next command off of the queue
+(defmethod url :sync-old-commands [_ dtserver-url]
+  (str dtserver-url "/sync_old_commands"))
+
+;; GET: fetch a specific command
+;; DELETE: complete a command
+(defmethod url :sync-old-command [_ dtserver-url command-id]
+  (str dtserver-url "/sync_old_commands/" command-id))
+
+(comment
+
+  (let [dtserver-url "http://127.0.0.1:4567"
+        id "123"]
+    [(url :old-service dtserver-url)
+     (url :dative-app dtserver-url)
+     (url :olds dtserver-url)
+     (url :old dtserver-url id)
+     (url :old-state dtserver-url id)
+     (url :sync-old-commands dtserver-url)
+     (url :sync-old-command dtserver-url id)])
+
+)
 
 ;; -- Domino 1 - Event Dispatch -----------------------------------------------
 
-;; TODO: uncomment the dispatch here
-(defn dispatch-poll-server-state-event [] #_(rf/dispatch [:poll-server-state]))
-
-(defonce poller (js/setInterval dispatch-poll-server-state-event 1000))
-
-;; TODO: comment out the clearInterval here
-(js/clearInterval poller)
-
 ;; -- Domino 2 - Event Handlers -----------------------------------------------
 
-;; (def server-uri "http://127.0.0.1:5676/")
-
-(def server-uri "http://127.0.0.1:4676/")
-
-(defn get-server-state-map
-  "Return the map needed by the http-xhrio effect to fetch updates from the
-  server."
-  [db]
-  {:method :get
-   :headers {:Content-Type "application/json; utf8"}
-   :format :json
-   :uri server-uri
-   :params {:head (-> db :server-aol aol/get-tip-hash)}
-   :timeout 8000
-   :response-format (ajax/json-response-format {:keywords? true})})
+(rf/reg-event-db :init (fn [_ _] default-db))
 
 (rf/reg-event-fx
- :initialize
- (fn [{:keys [db]} _]
-   (println "INITIALIZE")
+ :fetch-old-service
+ (fn [{{{dtserver-url :url} :dativetop-server :as db} :db} _]
+   (println "fetch old service from "
+            (url :old-service dtserver-url))
    {:db db
-    :http-xhrio (-> (get-server-state-map db)
-                    (assoc :on-success [:initialize-success])
-                    (assoc :on-failure [:initialize-failure]))}))
-
-(rf/reg-event-fx
- :poll-server-state
- (fn [{:keys [db]} _]
-   (println "registered event effects: :poll-server-state")
-   (if (:dirty? db)
-     (do
-       (println "DB is dirty, not polling server state")
-       {:db db})
-     (do
-       (println "DB is clean and tidy, polling server state")
-       (println "httpxhrio map:")
-       (println (get-server-state-map db))
-       #_(pprint/pprint (keys db))
-       {:db db
-        :http-xhrio (-> (get-server-state-map db)
-                        (assoc :on-success [:poll-server-state-success])
-                        (assoc :on-failure [:poll-server-state-failure]))}))))
-
-(def default-db
-  {:dative-apps []
-   :old-services []
-   :old-instances []
-   :aol []
-   :server-aol []
-   :new-old {:name "" :short-name "" :leader ""}
-   :dirty? false})
+    :http-xhrio
+    {:method :get
+     :headers {:Content-Type "application/json; utf8"}
+     :format :json
+     :uri (url :old-service dtserver-url)
+     :timeout 8000
+     :response-format (ajax/json-response-format {:keywords? true})
+     :on-success [:fetch-old-service-success]
+     :on-failure [:fetch-old-service-failure]}}))
 
 (rf/reg-event-db
- :initialize-success
- (fn [db [_ aol]]
-   (merge db
-          (aol/aol-to-domain-entities aol)
-          {:aol aol
-           :server-aol aol})))
+ :fetch-old-service-success
+ (fn [db [_ old-service]]
+   (print "fetch OLD service success with ...")
+   (print old-service)
+   (assoc db :old-service old-service)))
 
 (rf/reg-event-db
- :reset-local-state
- (fn [db _]
-   (println ":reset-local-state")
-   (assoc db :aol [])))
-
-(rf/reg-event-db
- :initialize-failure
- (fn [db _]
-   default-db))
-
-(rf/reg-event-db
- :poll-server-state-success-FART
- (fn [{aol :aol server-aol :server-aol :as db} [_ server-sfx]]
-   (let [[updated-aol err] (if (seq server-sfx)
-                             (aol/merge-aols server-aol aol)
-                             [aol nil])
-         domain-entities (aol/aol-to-domain-entities updated-aol)]
-     ;; (pprint/pprint domain-entities)
-     (println (-> db :old-instances first keys))
-     (merge db
-            domain-entities
-            {:aol updated-aol
-             :server-aol server-aol}))))
-
-;; :server-aol is ALWAYS a prefix of, or identical to, the true server-side AOL
-;; :aol MAY branch off of :server-aol; it is merged back in via a
-;; rebase/last-writer-wins strategy...
-
-(defn merge-server-state [{aol :aol server-aol :server-aol :as db} [_ server-sfx]]
-  (let [[updated-aol err] (if (seq server-sfx)
-                            (aol/merge-aols server-aol aol)
-                            [aol nil])
-        domain-entities (aol/aol-to-domain-entities updated-aol)]
-    ;; (pprint/pprint domain-entities)
-    (println (-> db :old-instances first keys))
-    (merge db
-           domain-entities
-           {:aol updated-aol
-            :server-aol server-aol})))
-
-(rf/reg-event-db :poll-server-state-success merge-server-state)
-
-(rf/reg-event-db
- :poll-server-state-failure
- (fn [db _]
+ :fetch-old-service-failure
+ (fn [db [_ old-service]]
+   (print "fetch OLD service failure with ...")
+   (print old-service)
    db))
-
-(rf/reg-event-db
-  :new-old-create
-  (fn [db _]
-    (let [new-old (:new-old db)]
-      (js/console.log "You want to create a new OLD called with this data:")
-      (js/console.log new-old)
-      (if (new-old-valid? new-old)
-        (js/console.log "valid!")
-        (js/console.log "invalid :("))
-      db)))
-
-(rf/reg-event-db
-  :new-old-name-change
-  (fn [db [_ new-name]]
-    (assoc-in db [:new-old :name] new-name)))
-
-#_(def tmp
-  {:db (assoc db :dirty? true)
-   :http-xhrio {:method :put
-                :params updated-oi
-                :timeout 5000
-                :format (ajax/json-request-format)
-                :headers {:Content-Type "application/json; utf8"}
-                :uri server-uri
-                :response-format (ajax/json-response-format {:keywords? true})
-                :on-success [:auto-sync?-change-success]
-                :on-failure [:auto-sync?-change-failure]}})
-
-(rf/reg-event-fx
- :auto-sync?-changed
- (fn [{:keys [db]} [_ old-url auto-sync?-val]]
-   (let [old-url-kw (keyword old-url)
-         ;; current-oi (get-in db [:old-instances old-url-kw])
-         current-oi 
-         (->> db :old-instances (filter #(= old-url (:url %))) first)
-
-         _ (println "current OLD instance")
-         _ (println current-oi)
-
-         _ (println "new val:")
-         _ (println auto-sync?-val)
-
-         updated-oi (assoc current-oi :auto-sync? auto-sync?-val)
-
-         _ (println "updated OLD instance")
-         _ (println updated-oi)
-
-         ]
-     {:db (assoc db :dirty? true)}
-     )))
-
-(rf/reg-event-db
- :auto-sync?-change-success
- (fn [db [_ r]]
-   (println "auto-sync? changed on server")
-   (-> db
-       (assoc :dirty? false)
-       (merge r))))
-
-(rf/reg-event-db
- :auto-sync?-change-failure
- (fn [db _]
-   (println "auto-sync? FAILED to change on server")
-   (assoc db :dirty? false)))
-
-(rf/reg-event-db
-  :new-old-short-name-change
-  (fn [db [_ new-short-name]]
-    (assoc-in db [:new-old :short-name] new-short-name)))
-
-(rf/reg-event-db
-  :new-old-leader-change
-  (fn [db [_ new-leader]]
-    (assoc-in db [:new-old :leader] new-leader)))
 
 ;; -- Domino 4 - Query  -------------------------------------------------------
 
 (rf/reg-sub
-  :old-instances
-  (fn [db _]
-    (:old-instances db)))
-
-(rf/reg-sub
-  :new-old-name
-  (fn [db _]
-    (get-in db [:new-old :name])))
-
-(rf/reg-sub
-  :new-old-short-name
-  (fn [db _]
-    (get-in db [:new-old :short-name])))
-
-(rf/reg-sub
-  :new-old-leader
-  (fn [db _]
-    (get-in db [:new-old :leader])))
-
-(rf/reg-sub
-  :dative-url
-  (fn [db _]
-    (-> db :dative-apps first :url)))
+ :old-service-url
+ (fn [db _]
+   (-> db :old-service :url)))
 
 ;; -- Domino 5 - View Functions ----------------------------------------------
 
 (defn data-row
   [row first? last?]
   [h-box
-   :class    "rc-div-table-row"
+   :class "rc-div-table-row"
    :children
-   [
-    [label
+   [[label
      :label (:name row)
      :width (:name col-widths)]
     [label
@@ -423,32 +295,26 @@
      :child
      [title
       :label "DativeTop"
-      :level :level1]]
-    [p (str "DativeTop is an application for linguistic data management.")]
-    [p "It lets you manage Online Linguistic Database (OLD) instances on your
-       local machine and configure them to sync with leader OLDs on the web."]
-    [p "DativeTop lets you use the Dative graphical user interface to work with
-       your OLD instances."]]])
+      :level :level1]]]])
 
-(defn dative-box
+(defn old-service-box
+  []
+  [v-box
+   ;; :style {:border "1px solid black"}
+   :children
+   [[title :label "Online Linguistic Database" :level :level2]
+    [:a
+     {:href @(rf/subscribe [:old-service-url])}
+     @(rf/subscribe [:old-service-url])]]])
+
+(defn dative-app-box
   []
   [v-box
    :children
-   [[box
-     :align :center
-     :child
-     [title
-      :label "Dative"
-      :level :level2]]
-    [v-box
-     :children
-     [[p
-       "Your local Dative app is being served at "
-       [:a {:href @(rf/subscribe [:dative-url])} @(rf/subscribe [:dative-url])]
-       "."]
-      [p "To view Dative, click the \"View\" menu item and then \"Dative\".
-         Click the \"Help\" menu item and then \"Visit Dative in Browser\" to
-         open Dative in your web browser."]]]]])
+   [[title :label "Dative" :level :level2]
+    [:a
+     {:href @(rf/subscribe [:dative-app-url])}
+     @(rf/subscribe [:dative-app-url])]]])
 
 (defn olds-box
   []
@@ -497,39 +363,16 @@
      :align :center
      :children
      [[dativetop-box]
-      [dative-box]
-      [olds-box]]]
-    [margin-box]
-    ]])
+      [h-box
+       :children
+       [[old-service-box]]]]]
+    [margin-box]]])
 
 ;; -- Entry Point -------------------------------------------------------------
 
 (defn ^:export run
   []
-  (rf/dispatch-sync [:initialize])     ;; puts a value into application state
-  (reagent/render [ui]              ;; mount the application's ui into '<div id="app" />'
-                  (js/document.getElementById "app")))
-
-
-(def test-aol
-  (list
-   [["d5265c65-fc1b-4b74-bc96-b9e4c08f4874"
-     "has"
-     "being"
-     "2019-09-23T17:29:01.623453"]
-    "fdf93a9485cc6fa332588d6af46ac6f4"
-    "ed1d168f2c45ce1ad624a8755cc49ee2"]
-   [["d5265c65-fc1b-4b74-bc96-b9e4c08f4874"
-     "is-a"
-     "dative-app"
-     "2019-09-23T17:29:01.623478"]
-    "59d604fc67114e745da4a5fd8eb58411"
-    "d3351a1932a6832ffcc39ee17a5661f2"]))
-
-(comment
-
-  (* 8 8)
-
-  (println "Hello from the REPL!")
-
-)
+  (rf/dispatch-sync [:init])
+  (rf/dispatch-sync [:fetch-old-service])
+  ;; mount the application's ui into '<div id="app" />'
+  (reagent/render [ui] (js/document.getElementById "app")))

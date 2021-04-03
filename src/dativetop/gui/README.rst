@@ -57,3 +57,19 @@ Notes
 
 - click "Fetch Server State"
   - dispatch :poll-server-state
+
+
+Documentation notes
+=============================================================================
+
+DativeTop is an application for linguistic data management.
+
+It lets you manage Online Linguistic Database (OLD) instances on your local
+machine and configure them to sync with leader OLDs on the web.
+
+DativeTop lets you use the Dative graphical user interface to work with your
+OLD instances.
+
+To view Dative, click the "View" menu item and then "Dative". Click the
+"Help" menu item and then "Visit Dative in Browser" to open Dative in
+your web browser.

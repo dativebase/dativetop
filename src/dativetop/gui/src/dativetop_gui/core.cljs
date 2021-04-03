@@ -20,7 +20,7 @@
 
 (def default-db
   {:dativetop-server {:url "http://127.0.0.1:4676"}
-   :dative-app {:url "http://127.0.0.1:5678"}
+   :dative-app {:url "http://127.0.0.1:0000"}
    :old-service {:url "http://127.0.0.1:1111"}
    :olds []
    :new-old {:name "" :short-name "" :leader ""}})
@@ -93,8 +93,6 @@
 (rf/reg-event-fx
  :fetch-old-service
  (fn [{{{dtserver-url :url} :dativetop-server :as db} :db} _]
-   (println "fetch old service from "
-            (url :old-service dtserver-url))
    {:db db
     :http-xhrio
     {:method :get
@@ -108,10 +106,7 @@
 
 (rf/reg-event-db
  :fetch-old-service-success
- (fn [db [_ old-service]]
-   (print "fetch OLD service success with ...")
-   (print old-service)
-   (assoc db :old-service old-service)))
+ (fn [db [_ old-service]] (assoc db :old-service old-service)))
 
 (rf/reg-event-db
  :fetch-old-service-failure
@@ -120,12 +115,42 @@
    (print old-service)
    db))
 
+(rf/reg-event-fx
+ :fetch-dative-app
+ (fn [{{{dtserver-url :url} :dativetop-server :as db} :db} _]
+   {:db db
+    :http-xhrio
+    {:method :get
+     :headers {:Content-Type "application/json; utf8"}
+     :format :json
+     :uri (url :dative-app dtserver-url)
+     :timeout 8000
+     :response-format (ajax/json-response-format {:keywords? true})
+     :on-success [:fetch-dative-app-success]
+     :on-failure [:fetch-dative-app-failure]}}))
+
+(rf/reg-event-db
+ :fetch-dative-app-success
+ (fn [db [_ dative-app]] (assoc db :dative-app dative-app)))
+
+(rf/reg-event-db
+ :fetch-dative-app-failure
+ (fn [db [_ dative-app]]
+   (print "fetch Dative app failure with ...")
+   (print dative-app)
+   db))
+
 ;; -- Domino 4 - Query  -------------------------------------------------------
 
 (rf/reg-sub
  :old-service-url
  (fn [db _]
    (-> db :old-service :url)))
+
+(rf/reg-sub
+ :dative-app-url
+ (fn [db _]
+   (-> db :dative-app :url)))
 
 ;; -- Domino 5 - View Functions ----------------------------------------------
 
@@ -297,10 +322,12 @@
       :label "DativeTop"
       :level :level1]]]])
 
+;; To add CSS style: :style {:border "1px solid black"}
+
 (defn old-service-box
   []
   [v-box
-   ;; :style {:border "1px solid black"}
+   :style {:padding "1em"}
    :children
    [[title :label "Online Linguistic Database" :level :level2]
     [:a
@@ -310,6 +337,7 @@
 (defn dative-app-box
   []
   [v-box
+   :style {:padding "1em"}
    :children
    [[title :label "Dative" :level :level2]
     [:a
@@ -365,7 +393,7 @@
      [[dativetop-box]
       [h-box
        :children
-       [[old-service-box]]]]]
+       [[old-service-box] [dative-app-box]]]]]
     [margin-box]]])
 
 ;; -- Entry Point -------------------------------------------------------------
@@ -374,5 +402,6 @@
   []
   (rf/dispatch-sync [:init])
   (rf/dispatch-sync [:fetch-old-service])
+  (rf/dispatch-sync [:fetch-dative-app])
   ;; mount the application's ui into '<div id="app" />'
   (reagent/render [ui] (js/document.getElementById "app")))

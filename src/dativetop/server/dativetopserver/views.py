@@ -351,7 +351,7 @@ def delete_old(request):
         request.response.status = 404
         return {'error': 'No OLD with supplied ID'}
     deleted_old = m.delete_old(old)
-    return deleted_old
+    return m.serialize_old(deleted_old)
 
 
 # /olds endpoint

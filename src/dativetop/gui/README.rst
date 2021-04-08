@@ -52,13 +52,6 @@ Connect to Shadow-CLJS nREPL with Spacemacs and Cider
        shadow.user> (shadow.cljs.devtools.api/nrepl-select :dativetop-gui)
 
 
-Notes
-================================================================================
-
-- click "Fetch Server State"
-  - dispatch :poll-server-state
-
-
 Documentation notes
 =============================================================================
 
@@ -73,3 +66,10 @@ OLD instances.
 To view Dative, click the "View" menu item and then "Dative". Click the
 "Help" menu item and then "Visit Dative in Browser" to open Dative in
 your web browser.
+
+Online Linguistic Database Instances
+
+These are your local Online Linguistic Database instances.
+
+You may have to manually tell Dative about these OLD instances by adding new
+"server" instances for them under Dative > Application Settings.

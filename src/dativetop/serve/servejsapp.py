@@ -79,13 +79,16 @@ class CustomTCPServer(socketserver.TCPServer):
         self.socket.bind(self.server_address)
 
 
-def serve_local_js_app(name, ip, port, url, root_path):
+def serve_local_js_app(name, url, root_path):
     """Serve the local JS app at ip:port in a separate thread.
 
     Return an argument-less func that, when called, will stop the local server
     and close the thread.
     """
-    OurCustomHTTPHandler =  get_custom_http_handler(name, root_path)
+    parse = urllib.parse.urlparse(url)
+    ip = parse.hostname
+    port = parse.port
+    OurCustomHTTPHandler = get_custom_http_handler(name, root_path)
     our_server = CustomTCPServer((ip, port), OurCustomHTTPHandler)
     thread = threading.Thread(
         target=_serve_local_js_app,

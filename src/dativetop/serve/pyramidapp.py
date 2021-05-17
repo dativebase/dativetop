@@ -9,21 +9,23 @@ import os
 import shlex
 import subprocess
 import threading
+import urllib.parse
 
 
 logger = logging.getLogger(__name__)
 
-def _fork_server_process(ip, port, root_path, config='config.ini'):
+
+def _fork_server_process(url, root_path, config='config.ini'):
     """Use Pyramid's pserve executable to serve the Pyramid app in a new
     process.
     """
+    parse = urllib.parse.urlparse(url)
     os.chdir(root_path)
     cmd = (
         f'pserve'
-        f' --reload'
         f' {config}'
-        f' http_port={port}'
-        f' http_host={ip}')
+        f' http_port={parse.port}'
+        f' http_host={parse.hostname}')
     cmd = shlex.split(cmd)
     # FIXME: this is still needed in a built (e.g., DativeTop.app) app...
     # './../../../python/bin/pserve'
@@ -46,12 +48,12 @@ def _monitor_server_process(process=None, name=None):
     return rc
 
 
-def serve_pyr(name, ip, port, url, root_path, config='config.ini'):
+def serve_pyr(name, url, root_path, config='config.ini'):
     """Serve the Pyramid app locally in a separate thread that forks a
     subprocess that invokes the pserve executable. Return a function that stops
     serving the Pyramid app.
     """
-    process = _fork_server_process(ip, port, root_path, config=config)
+    process = _fork_server_process(url, root_path, config=config)
     thread = threading.Thread(
         target=_monitor_server_process,
         kwargs={'process': process, 'name': name,},

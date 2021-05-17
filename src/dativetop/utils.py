@@ -1,8 +1,13 @@
+from collections import namedtuple
 import io
 import json
 import logging
 import os
 import re
+
+
+Service = namedtuple('Service', 'name, url, stopper')
+
 
 from dativetop.constants import (
     DATIVE_ROOT,

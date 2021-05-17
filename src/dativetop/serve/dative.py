@@ -5,14 +5,12 @@ thread, using a Python server.
 """
 
 from dativetop.serve.servejsapp import serve_local_js_app
-from dativetop.constants import (
-    IP,
-    DATIVE_PORT,
-    DATIVE_URL,
-    DATIVE_ROOT,
-)
+from dativetop.constants import DATIVE_ROOT
+import dativetop.utils as dtutils
 
 
-def serve_dative():
-    return serve_local_js_app(
-        'Dative', IP, DATIVE_PORT, DATIVE_URL, DATIVE_ROOT)
+def serve_dative(dative):
+    return dtutils.Service(
+        name=dative.name,
+        url=dative.url,
+        stopper=serve_local_js_app(dative.name, dative.url, DATIVE_ROOT))

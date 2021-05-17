@@ -26,14 +26,13 @@ import threading
 import webbrowser
 
 import pyperclip
+import requests
 import toga
 from toga.style import Pack
-from toga.style.pack import COLUMN, ROW, CENTER, LEFT, RIGHT
+from toga.style.pack import COLUMN, CENTER
 
 import dativetop.logging
 import dativetop.constants as c
-import dativetop.communicate as dtc
-from dativetop.getsettings import get_settings
 import dativetop.introspect as dti
 import dativetop.javascripts as dtjs
 import dativetop.serve as dtserve
@@ -48,79 +47,8 @@ os.environ['OLD_DB_RDBMS'] = 'sqlite'
 os.environ['OLD_SESSION_TYPE'] = 'file'
 
 
-class DativeTopWorking(toga.App):
-
-    def startup(self):
-        """
-        Construct and show the Toga application.
-
-        Usually, you would add your application to a main content box.
-        We then create a main window (with a name matching the app), and
-        show the main window.
-        """
-        main_box = toga.Box()
-
-        self.main_window = toga.MainWindow(title=self.formal_name)
-        self.main_window.content = main_box
-        self.main_window.show()
-
-
-def main():
-    return DativeTopWorking()
-
-
-
-
-
-
-"""DativeTop: a Toga app that serves Dative and the OLD locally.
-
-DativeTop transforms Dative/OLD into a desktop application using the Python
-Briefcase packaging tool.
-
-DativeTop serves the Dative JavaScript/CoffeeScript GUI (SPA) locally and
-displays it in a native WebView. It also serves the OLD locally. The local
-Dative instance can then be used to interact with the OLD instances being
-served by the local OLD.
-
-DativeTop provides its own interface for managing local OLD instances and
-configuring them to sync up with leader OLD instances on the Internet.
-
-The ultimate goal is to be able to distribute native binaries so that DativeTop
-can be easily installed and launched as a desktop application by non-technical
-users.
-"""
-
-from collections import namedtuple
-import json
-import logging
-import os
-import pprint
-import sys
-import threading
-import webbrowser
-
-import pyperclip
-import toga
-from toga.style import Pack
-from toga.style.pack import COLUMN, ROW, CENTER, LEFT, RIGHT
-
-import dativetop.logging
-import dativetop.constants as c
-import dativetop.communicate as dtc
-from dativetop.getsettings import get_settings
-import dativetop.introspect as dti
-import dativetop.javascripts as dtjs
-import dativetop.serve as dtserve
-import dativetop.utils as dtutils
-
-
-logger = logging.getLogger(__name__)
-
-
-# TODO: stop doing this: ...
-os.environ['OLD_DB_RDBMS'] = 'sqlite'
-os.environ['OLD_SESSION_TYPE'] = 'file'
+Services = namedtuple(
+    'Services', 'dative_app, dtgui, dtserver, old_service')
 
 
 def dativetop_on_exit(dativetop_app):
@@ -132,9 +60,9 @@ def dativetop_on_exit(dativetop_app):
             'Error', dativetop_app.fatal_error)
 
 
-def launch_dativetop(service_stoppers):
+def launch_dativetop(services):
     icon = toga.Icon('resources/dativetop.icns')
-    app = DativeTop(service_stoppers,
+    app = DativeTop(services,
                     formal_name=c.APP_FORMAL_NAME,
                     app_name=c.APP_NAME,
                     app_id=c.APP_ID,
@@ -144,31 +72,19 @@ def launch_dativetop(service_stoppers):
     return app
 
 
-def _verify_services(dativetop_app=None, dativetop_settings=None):
+def _verify_services(dativetop_app=None):
     """Verify that all of the DativeTop services are running as expected. If
     they are not, set a fatal error message and tell DativeTop to shut itself
     down. This should be run in a separate thread so that the DativeTop GUI can
     display ASAP and verification can proceed in parallel.
     """
-    #pprint.pprint(dativetop_settings)
-    domain_entities, err = dti.introspect(dativetop_settings)
+    _, err = dti.confirm_services_up(dativetop_app.services)
     if err:
         msg = ('Failed to start some DativeTop services. Error: {}. DativeTop'
                ' must shut down now.'.format(err))
         logger.error(msg)
         dativetop_app.fatal_error = msg
         dativetop_app.quit_cmd(None)
-        return
-    logger.info('got domain_entities:')
-    logger.info(domain_entities)
-    success, err = dtc.communicate(domain_entities)
-    if err:
-        logger.warning(
-            'Failed to communicate the known local domain entities (e.g.,'
-            ' running OLD instances to the DativeTop Server process. Error:'
-            ' %s.', err)
-    else:
-        logger.info('This is what we call success: %s', success)
 
 
 class DativeTop(toga.App):
@@ -180,15 +96,14 @@ class DativeTop(toga.App):
     ClojureScript SPA.
     """
 
-    def __init__(self, service_stoppers, *args, **kwargs):
-        self.dativetop_settings = get_settings(config_path=c.CONFIG_PATH)
+    def __init__(self, services, *args, **kwargs):
+        self.services = services
         self._about_window = None
         self.dative_gui = None
         self.dativetop_gui = None
         self.commands = None
-        self.service_stoppers = service_stoppers
         self.fatal_error = None
-        super(DativeTop, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def startup(self):
         """On startup, build the Dative and DativeTop JavaScript
@@ -209,19 +124,18 @@ class DativeTop(toga.App):
     def verify_services(self):
         thread = threading.Thread(
             target=_verify_services,
-            kwargs={'dativetop_app': self,
-                    'dativetop_settings': self.dativetop_settings},
+            kwargs={'dativetop_app': self},
             daemon=True)
         thread.start()
 
     def get_dative_gui(self):
         dative_gui = toga.WebView(style=Pack(flex=1))
-        dative_gui.url = c.DATIVE_URL
+        dative_gui.url = self.services.dative_app.url
         return dative_gui
 
     def get_dativetop_gui(self):
         dativetop_gui = toga.WebView(style=Pack(flex=1))
-        dativetop_gui.url = c.DATIVETOP_GUI_URL
+        dativetop_gui.url = '{}/index.html'.format(self.services.dtgui.url)
         return dativetop_gui
 
     def get_about_window(self):
@@ -279,19 +193,19 @@ class DativeTop(toga.App):
         self._about_window = about_window
         return self._about_window
 
-    def about_cmd(self, sender):
+    def about_cmd(self, _):
         about_window = self.get_about_window()
         about_window.show()
 
-    async def copy_cmd(self, sender):
+    async def copy_cmd(self, _):
         clip = await self.dative_gui.evaluate_javascript(dtjs.COPY_SELECTION_JS)
         return pyperclip.copy(str(clip))
 
-    async def cut_cmd(self, sender):
+    async def cut_cmd(self, _):
         clip = await self.dative_gui.evaluate_javascript(dtjs.CUT_SELECTION_JS)
         return pyperclip.copy(str(clip))
 
-    async def select_all_cmd(self, sender):
+    async def select_all_cmd(self, _):
         await self.dative_gui.evaluate_javascript(dtjs.SELECT_ALL_JS)
 
     async def reset_dative_app_settings_cmd(self, sender):
@@ -308,7 +222,7 @@ class DativeTop(toga.App):
         if app_set_str:
             try:
                 return json.loads(app_set_str)
-            except:
+            except Exception:
                 return {}
         return {}
 
@@ -330,15 +244,15 @@ class DativeTop(toga.App):
         app_settings = await self.really_get_dative_app_settings()['servers']
         logger.debug(pprint.pformat(len(app_settings)))
 
-    async def paste_cmd(self, sender):
+    async def paste_cmd(self, _):
         await self.dative_gui.evaluate_javascript(
             dtjs.paste_js(pyperclip.paste().replace('`', r'\`')))
 
-    def reload_cmd(self, sender):
+    def reload_cmd(self, _):
         """This should be the equivalent of a browser refresh of the Dative
         SPA.
         """
-        self.dative_gui.url = c.DATIVE_URL
+        self.dative_gui.url = self.services.dative_app.url
 
     async def really_get_dative_app_settings(self):
         """Return the Dative application settings (from localStorage in the
@@ -351,43 +265,41 @@ class DativeTop(toga.App):
             dative_app_settings = await self.get_dative_app_settings()
         return dative_app_settings
 
-    def view_dativetop_gui_cmd(self, sender):
+    def view_dativetop_gui_cmd(self, _):
         self.main_window.content = self.dativetop_gui
 
-    def view_dative_gui_cmd(self, sender):
+    def view_dative_gui_cmd(self, _):
         self.main_window.content = self.dative_gui
 
-    def copy_dative_url_to_clipboard_cmd(self, sender):
-        pyperclip.copy(c.DATIVE_URL)
+    def copy_dative_url_to_clipboard_cmd(self, _):
+        pyperclip.copy(self.services.dative_app.url)
 
-    async def back_cmd(self, sender):
+    async def back_cmd(self, _):
         await self.dative_gui.evaluate_javascript('window.history.back();')
 
-    async def forward_cmd(self, sender):
+    async def forward_cmd(self, _):
         await self.dative_gui.evaluate_javascript('window.history.forward();')
 
     @staticmethod
-    def visit_old_web_site_cmd(sender):
+    def visit_old_web_site_cmd(_):
         webbrowser.open(c.OLD_WEB_SITE_URL, new=1, autoraise=True)
 
     @staticmethod
-    def visit_dative_web_site_cmd(sender):
+    def visit_dative_web_site_cmd(_):
         webbrowser.open(c.DATIVE_WEB_SITE_URL, new=1, autoraise=True)
 
-    @staticmethod
-    def visit_dative_in_browser_cmd(sender):
-        webbrowser.open(c.DATIVE_URL, new=1, autoraise=True)
+    def visit_dative_in_browser_cmd(self, _):
+        webbrowser.open(self.services.dative_app.url, new=1, autoraise=True)
 
-    @staticmethod
-    def visit_old_in_browser_cmd(sender):
-        webbrowser.open('{}/old/'.format(c.OLD_URL), new=1, autoraise=True)
+    def visit_old_in_browser_cmd(self, _):
+        webbrowser.open(f'{self.services.old_service.url}/old/', new=1, autoraise=True)
 
-    def quit_cmd(self, sender):
+    def quit_cmd(self, _):
         """Handle DativeTop quitting. We stop serving Dative and the OLD
         cleanly so that we can start them up again when DativeTop is launched
         anew.
         """
-        stop_services(self.service_stoppers)
+        stop_services(self.services)
         self.exit()
 
     def set_commands(self):
@@ -530,24 +442,52 @@ class DativeTop(toga.App):
         #self.main_window.toolbar.add(about_cmd, quit_cmd)
 
 
-Stoppers = namedtuple(
-    'Stoppers', 'dative, dativetop_gui, dativetop_server, old')
+
+def fetch_old_service():
+    return dtutils.Service(
+        name='OLDService',
+        url=requests.get(
+            '{}/old_service'.format(c.DATIVETOP_SERVER_URL)).json()['url'],
+        stopper=None)
+
+
+def fetch_dative_app():
+    return dtutils.Service(
+        name='DativeApp',
+        url=requests.get(
+            '{}/dative_app'.format(c.DATIVETOP_SERVER_URL)).json()['url'],
+        stopper=None)
 
 
 def start_services():
-    return Stoppers(
-        dative=dtserve.serve_dative(),
-        dativetop_gui=dtserve.serve_dativetop_gui(),
-        dativetop_server=dtserve.serve_dativetop_server(),
-        old=dtserve.serve_old())
+    """Start the needed services---DTServer, DativeApp, OLDService, and
+    DTGUI---and return a Services namedtuple containing the four services, each
+    as a Service namedtuple.
+    """
+    # 1. First start up the DTServer Pyramid service, our source of truth.
+    dtserver = dtserve.serve_dativetop_server()
+    _, err = dti.confirm_services_up((dtserver,))
+    if err:
+        msg = (f'Failed to start {dtserver.name}. Error: {err}'
+               f' DativeTop must shut down now.')
+        logger.error(msg)
+        sys.exit(1)
+    # 2. Then fetch from DTServer the DativeApp and OLDService URLs and start
+    #    these services in separate threads.
+    dative_app = dtserve.serve_dative(fetch_dative_app())
+    old_service = dtserve.serve_old(fetch_old_service())
+    # 3. Then start up the DTGUI in a separate thread
+    dtgui = dtserve.serve_dativetop_gui(old_service, dative_app, dtserver)
+    return Services(dtserver=dtserver,
+                    dtgui=dtgui,
+                    dative_app=dative_app,
+                    old_service=old_service)
 
 
-def stop_services(stoppers):
-    for stopper in stoppers:
-        stopper()
+def stop_services(services):
+    for service in services:
+        service.stopper()
 
 
 def main():
     launch_dativetop(start_services())
-
-

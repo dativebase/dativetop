@@ -17,9 +17,9 @@
    :is-auto-syncing? false})
 
 (def default-db
-  {:dativetop-server {:url "http://127.0.0.1:4676"}
-   :dative-app {:url "http://127.0.0.1:0000"}
-   :old-service {:url "http://127.0.0.1:1111"}
+  {:dativetop-server {:url js/DativeTopServerURL}
+   :dative-app {:url js/DativeAppURL}
+   :old-service {:url js/OLDServiceURL}
    :olds {}
    :old-edits {}
    :old-editor-visible? {}
@@ -160,9 +160,18 @@
                       (set/rename-keys
                        old {:is_auto_syncing :is-auto-syncing?})]))
               (into {}))]
-     (assoc db
-            :olds olds
-            :old-edits olds))))
+     (-> db
+         (assoc :olds olds)
+         ;; only update OLD edits that have not been edited locally
+         (update :old-edits
+                 (fn [old-edits]
+                   (reduce
+                    (fn [old-edits [old-id old]]
+                      (if-let [prev (get old-edits old-id)]
+                        old-edits
+                        (assoc old-edits old-id old)))
+                    old-edits
+                    olds)))))))
 
 (rf/reg-event-db
  :fetch-olds-failure
@@ -760,6 +769,14 @@
       [olds-box]]]]])
 
 ;; -- Entry Point -------------------------------------------------------------
+
+(defn fetch-olds-dispatch []
+  (rf/dispatch [:fetch-olds]))
+
+;; Fetch the OLDs every 2 seconds.
+;; `defonce` is like `def` but it ensures only instance is ever
+;; created in the face of figwheel hot-reloading of this file.
+(defonce fetch-olds-timer (js/setInterval fetch-olds-dispatch 2000))
 
 (defn ^:export run
   []

@@ -18,11 +18,12 @@
                 ]
  :nrepl {:port 8092}
  :dev-http {8090 "target/"}
- :builds {:dativetop-gui {:output-dir "target/"
-                          :asset-path "."
-                          :target :browser
-                          :modules {:main {:init-fn dativetop-gui.core/run}}
-                          :devtools {:after-load dativetop-gui.core/run
-                                     :http-root "target"
-                                     :http-port 8090}}}}
+ :builds {:dativetop-gui
+          {:output-dir "target/"
+           :asset-path "."
+           :target :browser
+           :modules {:main {:init-fn dativetop-gui.core/run}}
+           :devtools {:after-load dativetop-gui.core/run
+                      :http-root "target"
+                      :http-port 8090}}}}
 

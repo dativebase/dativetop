@@ -36,6 +36,7 @@ import dativetop.constants as c
 import dativetop.introspect as dti
 import dativetop.javascripts as dtjs
 import dativetop.serve as dtserve
+import dativetop.syncmanager as syncmanager
 import dativetop.utils as dtutils
 
 
@@ -120,6 +121,7 @@ class DativeTop(toga.App):
         self.main_window.content = self.dativetop_gui
         self.main_window.show()
         self.verify_services()
+        syncmanager.start_sync_manager(self.services.dtserver)
 
     def verify_services(self):
         thread = threading.Thread(
@@ -440,7 +442,6 @@ class DativeTop(toga.App):
             visit_dative_web_site_cmd,
         )
         #self.main_window.toolbar.add(about_cmd, quit_cmd)
-
 
 
 def fetch_old_service():

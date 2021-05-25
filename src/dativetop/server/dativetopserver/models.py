@@ -300,6 +300,14 @@ def serialize_sync_old_command(sync_old_command):
             'acked': sync_old_command.acked}
 
 
+def get_open_sync_old_commands():
+    """Get all currently open (not acked) sync-OLD! commands."""
+    return DBSession.query(SyncOLDCommand).filter(
+        SyncOLDCommand.end > get_now(),
+        SyncOLDCommand.acked.is_(False)
+    ).order_by(asc(SyncOLDCommand.start)).all()
+
+
 def enqueue_sync_old_command(old_id):
     """Enqueue a sync-OLD! command."""
     now = get_now()

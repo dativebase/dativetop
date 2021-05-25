@@ -389,10 +389,17 @@ def old_state(request):
 
 
 # OLDSyncCommand API:
+# Index:    GET    /sync_old_commands
 # Enqueue:  POST   /sync_old_commands
 # Pop:      PUT    /sync_old_commands
-# Read:     GET    /sync_old_commands/{id}
+# Show:     GET    /sync_old_commands/{id}
 # Complete: DELETE /sync_old_commands/{id}
+
+
+def index_commands(request):
+    return [m.serialize_sync_old_command(c) for c in
+            m.get_open_sync_old_commands()]
+
 
 def enqueue_command(request):
     payload, error = get_json_payload(request)
@@ -418,7 +425,7 @@ def pop_command(request):
     return m.serialize_sync_old_command(command)
 
 
-def read_command(request):
+def show_command(request):
     command_id = request.matchdict['command_id']
     try:
         command = m.get_sync_old_command(command_id)
@@ -439,6 +446,8 @@ def complete_command(request):
 
 
 def sync_old_commands(request):
+    if request.method == 'GET':
+        return index_commands(request)
     if request.method == 'POST':
         return enqueue_command(request)
     if request.method == 'PUT':
@@ -450,7 +459,7 @@ def sync_old_commands(request):
 
 def sync_old_command(request):
     if request.method == 'GET':
-        return read_command(request)
+        return show_command(request)
     if request.method == 'DELETE':
         return complete_command(request)
     request.response.status = 405

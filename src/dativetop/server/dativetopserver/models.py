@@ -1,6 +1,7 @@
 from collections import namedtuple
 import datetime
 import json
+import logging
 import transaction
 from uuid import uuid4
 
@@ -30,6 +31,9 @@ from sqlalchemy.orm import (
 )
 
 from zope.sqlalchemy import register
+
+
+logger = logging.getLogger(__name__)
 
 
 DBSession = scoped_session(sessionmaker())

@@ -19,11 +19,11 @@ logging_config = dict(
     handlers={
         'h': {'class': 'logging.StreamHandler',
               'formatter': 'f',
-              'level': logging.DEBUG}
+              'level': logging.INFO}
     },
     root={
         'handlers': ['h'],
-        'level': logging.DEBUG,
+        'level': logging.INFO,
     },
 )
 
@@ -397,9 +397,14 @@ def old_state(request):
 
 
 def index_commands(request):
-    return [m.serialize_sync_old_command(c) for c in
-            m.get_open_sync_old_commands()]
-
+    try:
+        return [m.serialize_sync_old_command(c) for c in
+                m.get_open_sync_old_commands()]
+    except Exception as e:
+        msg = 'Failed to fetch all sync-OLD! commands'
+        logger.exception(msg)
+        request.response.status = 500
+        return {'error': msg}
 
 def enqueue_command(request):
     payload, error = get_json_payload(request)

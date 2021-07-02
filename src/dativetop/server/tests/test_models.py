@@ -182,16 +182,18 @@ class ModelsTests(unittest.TestCase):
         old1 = m.create_old('one')
         old2 = m.create_old('two')
         old3 = m.create_old('three')
-        cmd1 = m.enqueue_sync_old_command(old2.history_id)
+        cmd1, status1 = m.enqueue_sync_old_command(old2.history_id)
         self.assertFalse(cmd1.acked)
         self.assertGreater(cmd1.end, m.get_now())
         self.assertEqual(cmd1.old_id, old2.history_id)
+        self.assertEqual('created', status1)
         self.assertIs(cmd1, m.get_sync_old_command(cmd1.history_id))
 
         # Trying to enqueue a sync command for the same OLD again will just
         # return the existing active command.
-        cmd1_clone = m.enqueue_sync_old_command(old2.history_id)
+        cmd1_clone, status_clone = m.enqueue_sync_old_command(old2.history_id)
         self.assertIs(cmd1, cmd1_clone)
+        self.assertEqual('found', status_clone)
 
         # Let's pop the command, expecting that to ACK it
         acked_cmd1 = m.pop_sync_old_command()
@@ -202,8 +204,9 @@ class ModelsTests(unittest.TestCase):
 
         # Trying to enqueue a sync command for the same OLD again will again
         # just return the existing active acked command.
-        cmd1_clone2 = m.enqueue_sync_old_command(old2.history_id)
+        cmd1_clone2, status_clone2 = m.enqueue_sync_old_command(old2.history_id)
         self.assertIs(acked_cmd1, cmd1_clone2)
+        self.assertEqual('found', status_clone2)
 
         # Pretend we're a worker marking the command as complete
         completed_cmd1 = m.complete_sync_old_command(acked_cmd1.history_id)
@@ -212,7 +215,7 @@ class ModelsTests(unittest.TestCase):
         # Create three commands and expect to pop them in FIFO order
         m.enqueue_sync_old_command(old2.history_id)
         m.enqueue_sync_old_command(old3.history_id)
-        cmd = m.enqueue_sync_old_command(old1.history_id)
+        cmd, _ = m.enqueue_sync_old_command(old1.history_id)
         self.assertEqual(old2.history_id, m.pop_sync_old_command().old_id)
         self.assertEqual(old3.history_id, m.pop_sync_old_command().old_id)
         self.assertEqual(old1.history_id, m.pop_sync_old_command().old_id)

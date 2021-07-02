@@ -320,11 +320,11 @@ def enqueue_sync_old_command(old_id):
         SyncOLDCommand.old_id == old_id,
     ).first()
     if existing_command:
-        return existing_command
+        return existing_command, 'found'
     command = SyncOLDCommand(old_id=old_id) # enqueued
     DBSession.add(command)
     DBSession.flush()
-    return command
+    return command, 'created'
 
 
 def get_sync_old_command(sync_old_command_id):

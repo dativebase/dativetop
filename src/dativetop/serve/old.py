@@ -16,4 +16,5 @@ def serve_old(old):
     return dtutils.Service(
         name=old.name,
         url=old.url,
-        stopper=serve_pyr(old.name, old.url, OLD_DIR))
+        stopper=serve_pyr(old.name, old.url, OLD_DIR,
+                          config='configlocal.ini'))

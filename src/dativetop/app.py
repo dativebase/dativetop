@@ -200,15 +200,15 @@ class DativeTop(toga.App):
         about_window.show()
 
     async def copy_cmd(self, _):
-        clip = await self.dative_gui.evaluate_javascript(dtjs.COPY_SELECTION_JS)
+        clip = await self.main_window.content.evaluate_javascript(dtjs.COPY_SELECTION_JS)
         return pyperclip.copy(str(clip))
 
     async def cut_cmd(self, _):
-        clip = await self.dative_gui.evaluate_javascript(dtjs.CUT_SELECTION_JS)
+        clip = await self.main_window.content.evaluate_javascript(dtjs.CUT_SELECTION_JS)
         return pyperclip.copy(str(clip))
 
     async def select_all_cmd(self, _):
-        await self.dative_gui.evaluate_javascript(dtjs.SELECT_ALL_JS)
+        await self.main_window.content.evaluate_javascript(dtjs.SELECT_ALL_JS)
 
     async def reset_dative_app_settings_cmd(self, sender):
         """TODO: this does not seem to work ..."""
@@ -247,7 +247,7 @@ class DativeTop(toga.App):
         logger.debug(pprint.pformat(len(app_settings)))
 
     async def paste_cmd(self, _):
-        await self.dative_gui.evaluate_javascript(
+        await self.main_window.content.evaluate_javascript(
             dtjs.paste_js(pyperclip.paste().replace('`', r'\`')))
 
     def reload_cmd(self, _):
@@ -423,10 +423,10 @@ class DativeTop(toga.App):
             about_cmd,
             quit_cmd,
             # Edit
-            # cut_cmd,
-            # copy_cmd,
-            # paste_cmd,
-            # select_all_cmd,
+            cut_cmd,
+            copy_cmd,
+            paste_cmd,
+            select_all_cmd,
             # View
             reload_cmd,
             reset_cmd,

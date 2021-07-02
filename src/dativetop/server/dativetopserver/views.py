@@ -419,7 +419,11 @@ def enqueue_command(request):
     except NoResultFound:
         request.response.status = 404
         return {'error': 'No OLD with supplied ID'}
-    return m.serialize_sync_old_command(m.enqueue_sync_old_command(old_id))
+    cmd, status = m.enqueue_sync_old_command(old_id)
+    request.response.status = 201
+    if status == 'found':
+        request.response.status = 200
+    return m.serialize_sync_old_command(cmd)
 
 
 def pop_command(request):

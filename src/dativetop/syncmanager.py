@@ -30,13 +30,16 @@ def get_open_sync_old_commands(dtserver):
 
 def enqueue_sync_old_command(dtserver, old_id):
     try:
-        return requests.post(
+        resp = requests.post(
             f'{dtserver.url}sync_old_commands',
-            json={'old_id': old_id}).json()
+            json={'old_id': old_id})
+        payload = resp.json()
+        status = resp.status_code
+        return (payload, status), None
     except Exception as e:
         msg = f'Failed to enqueue a sync-OLD! command for OLD {old_id}'
         logger.exception(msg)
-        return {'error': msg}
+        return None, msg
 
 
 def get_olds(dtserver):
@@ -56,14 +59,20 @@ def sync_manager(dtserver):
             olds_needing_commands = [
                 old['id'] for old in olds
                 if old['is_auto_syncing'] and old['id'] not in command_old_ids]
+
             for old_id in olds_needing_commands:
-                enqueue_resp = enqueue_sync_old_command(dtserver, old_id)
-                error = enqueue_resp.get('error')
+                result, error = enqueue_sync_old_command(dtserver, old_id)
                 if error:
                     logger.error(error)
                 else:
-                    logger.info(f'Enqueued sync-OLD! command for OLD'
-                                f'{enqueue_resp["old_id"]}')
+                    cmd, status = result
+                    if status == 201:
+                        logger.info(f'Enqueued sync-OLD! command for OLD'
+                                    f' {cmd["old_id"]}')
+                    elif status == 200:
+                        logger.info(
+                            f'There is already an active sync-OLD! command for'
+                            f' OLD {cmd["old_id"]}')
         except Exception as e:
             logger.exception('SyncManager failed when attempting to create new'
                              ' sync-OLD! commands')

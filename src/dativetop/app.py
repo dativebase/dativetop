@@ -37,6 +37,7 @@ import dativetop.introspect as dti
 import dativetop.javascripts as dtjs
 import dativetop.serve as dtserve
 import dativetop.syncmanager as syncmanager
+import dativetop.syncworker as syncworker
 import dativetop.utils as dtutils
 
 
@@ -122,6 +123,8 @@ class DativeTop(toga.App):
         self.main_window.show()
         self.verify_services()
         syncmanager.start_sync_manager(self.services.dtserver)
+        syncworker.start_sync_worker(
+            self.services.dtserver, self.services.old_service)
 
     def verify_services(self):
         thread = threading.Thread(

@@ -17,22 +17,22 @@ COPY_SELECTION_JS = (
 
 # JavaScript/jQuery to cut (copy and remove) any selected text
 CUT_SELECTION_JS = (
-    "var focused = $(':focus');\n"
-    "var focused_ntv = focused[0];\n"
-    "var start = focused_ntv.selectionStart;\n"
-    "var end = focused_ntv.selectionEnd;\n"
-    "var focused_val = focused.val();\n"
-    "var new_focused_val = focused_val.slice(0, start) + "
-    "focused_val.slice(end, focused_val.length);\n"
-    "focused.val(new_focused_val);\n"
-    "focused_ntv.setSelectionRange(start, start);\n"
-    "focused_val.slice(start, end);"
+    "var focused = document.activeElement;\n"
+    "var start = focused.selectionStart;\n"
+    "var end = focused.selectionEnd;\n"
+    "var val = focused.value;\n"
+    "var new_val = val.slice(0, start) + val.slice(end, val.length);\n"
+    "focused.value = new_val;\n"
+    "focused.setSelectionRange(start, start);\n"
+    "val.slice(start, end);"
 )
 
 
 # JavaScript/jQuery to select all text
 SELECT_ALL_JS = (
-    "$(':focus').select();"
+    "var focused = document.activeElement;\n"
+    "var val = focused.value;\n"
+    "focused.setSelectionRange(0, val.length);"
 )
 
 
@@ -41,17 +41,15 @@ def paste_js(clipboard):
     element in the DOM using JavaScript/jQuery.
     """
     return (
-        f"var focused = $(':focus');\n"
-        f"var focused_ntv = focused[0];\n"
-        f"var start = focused_ntv.selectionStart;\n"
-        f"var end = focused_ntv.selectionEnd;\n"
-        f"var focused_val = focused.val();\n"
-        f"focused.val(focused_val.slice(0, start) + "
-        f"`{clipboard}` + focused_val.slice(end, focused_val.length));\n"
+        f"var focused = document.activeElement;\n"
+        f"var start = focused.selectionStart;\n"
+        f"var end = focused.selectionEnd;\n"
+        f"var val = focused.value;\n"
+        f"var new_val = val.slice(0, start) + `{clipboard}` + val.slice(end, val.length);\n"
+        f"focused.value = new_val;\n"
         f"var cursorPos = start + `{clipboard}`.length;\n"
-        f"focused_ntv.setSelectionRange(cursorPos, cursorPos);"
+        f"focused.setSelectionRange(cursorPos, cursorPos);"
     )
-
 
 DESTROY_DATIVE_APP_SETTINGS = (
     "localStorage.removeItem('dativeApplicationSettings');"

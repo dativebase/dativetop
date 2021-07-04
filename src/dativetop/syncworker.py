@@ -9,8 +9,8 @@ The SyncWorker performs these steps in a loop:
 4. Fetch the last modified values for each resource in the remote OLD.
 5. Compute a diff in order to determine required updates, deletes and adds.
 6. Fetch the remote resources that have been updated or added.
-7. Mutate the local OLD's SQLite db so that it matchees the remote leader.
-8. Sleep and then return to (1).
+7. Mutate the local OLD's SQLite db so that it matches the remote leader.
+8. Sleep for a time and then return to (1).
 """
 
 import datetime
@@ -265,6 +265,26 @@ def get_diff(prev, curr):
     return diff
 
 
+BATCH_SIZE = 200
+
+
+def batch_tables(tables):
+    batches = []
+    while tables:
+        new_remainder = {}
+        batch = {}
+        for table_name, ids in tables.items():
+            if not ids:
+                continue
+            batch[table_name] = ids[:BATCH_SIZE]
+            remainder_ids = ids[BATCH_SIZE:]
+            if remainder_ids:
+                new_remainder[table_name] = remainder_ids
+        batches.append(batch)
+        tables = new_remainder
+    return batches
+
+
 def process_command(dtserver, old_service, command):
     """Process a sync-OLD! command."""
 
@@ -304,16 +324,13 @@ def process_command(dtserver, old_service, command):
     diff = get_diff(local_last_mod, leader_last_mod)
 
     # Perform the local updates by modifying the SQLite db of the OLD directly.
+    meta = sqla.MetaData()
     db_path = os.path.join(c.OLD_DIR, f"{old['slug']}.sqlite")
     engine = sqla.create_engine(f'sqlite:///{db_path}')
-    meta = sqla.MetaData()
-
-    # TODO: consider performing all of the following in a transaction.
-
-    # Perform any deletions
-    delete_state = diff['delete']
-    if delete_state:
-        with engine.connect() as conn:
+    with engine.connect() as conn:
+        # Perform any deletions
+        delete_state = diff['delete']
+        if delete_state:
             for table_name, rows in delete_state.items():
                 if not rows:
                     continue
@@ -321,36 +338,36 @@ def process_command(dtserver, old_service, command):
                 conn.execute(
                     table.delete().where(
                         table.c.id.in_(rows)))
-
-    # Perform any additions
-    add_params = diff['add']
-    if add_params:
-        add_state = leader_client.post('sync/tables', {'tables': add_params})
-        with engine.connect() as conn:
-            for table_name, rows in add_state.items():
-                if not rows:
-                    continue
-                table = sqla.Table(table_name, meta, autoload_with=engine)
-                conn.execute(
-                    table.insert(),
-                    [prepare_row_for_upsert(table_name, row)
-                     for row in rows.values()])
-
-    # Perform any updates
-    update_params = diff['update']
-    if update_params:
-        update_state = leader_client.post('sync/tables', {'tables': update_params})
-        with engine.connect() as conn:
-            for table_name, rows in update_state.items():
-                if not rows:
-                    continue
-                table = sqla.Table(table_name, meta, autoload_with=engine)
-                for row in rows.values():
-                    row_id = row['id']
-                    updated_row = prepare_row_for_upsert(table_name, row)
+        # Perform any additions
+        add_params = diff['add']
+        if add_params:
+            for batch in batch_tables(add_params):
+                add_state = leader_client.post(
+                    'sync/tables', {'tables': batch})
+                for table_name, rows in add_state.items():
+                    if not rows:
+                        continue
+                    table = sqla.Table(table_name, meta, autoload_with=engine)
                     conn.execute(
-                        table.update().where(
-                            table.c.id == row_id).values(**updated_row))
+                        table.insert(),
+                        [prepare_row_for_upsert(table_name, row)
+                        for row in rows.values()])
+        # Perform any updates
+        update_params = diff['update']
+        if update_params:
+            for batch in batch_tables(update_params):
+                update_state = leader_client.post(
+                    'sync/tables', {'tables': batch})
+                for table_name, rows in update_state.items():
+                    if not rows:
+                        continue
+                    table = sqla.Table(table_name, meta, autoload_with=engine)
+                    for row in rows.values():
+                        row_id = row['id']
+                        updated_row = prepare_row_for_upsert(table_name, row)
+                        conn.execute(
+                            table.update().where(
+                                table.c.id == row_id).values(**updated_row))
 
 
 def sync_worker(dtserver, old_service):
@@ -371,7 +388,7 @@ def sync_worker(dtserver, old_service):
             # Tell DTServer that we have finished processing the command.
             if command:
                 complete_sync_old_command(dtserver, command)
-            time.sleep(2)
+            time.sleep(5)
 
 
 def start_sync_worker(dtserver, old_service):

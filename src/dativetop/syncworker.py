@@ -265,10 +265,10 @@ def get_diff(prev, curr):
     return diff
 
 
-BATCH_SIZE = 200
-
-
-def batch_tables(tables):
+def batch_tables(tables, batch_size=200):
+    """Given a ``tables`` map from table names (strings) to lists of table row
+    IDs (integers), return a list of maps of the same form such that every list
+    of row IDs contains ``batch_size`` or fewer elements."""
     batches = []
     while tables:
         new_remainder = {}
@@ -276,8 +276,8 @@ def batch_tables(tables):
         for table_name, ids in tables.items():
             if not ids:
                 continue
-            batch[table_name] = ids[:BATCH_SIZE]
-            remainder_ids = ids[BATCH_SIZE:]
+            batch[table_name] = ids[:batch_size]
+            remainder_ids = ids[batch_size:]
             if remainder_ids:
                 new_remainder[table_name] = remainder_ids
         batches.append(batch)

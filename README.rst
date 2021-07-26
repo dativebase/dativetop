@@ -216,6 +216,19 @@ particular target platform, e.g., Mac OS X or Windows.
 Build for Mac OS X
 --------------------------------------------------------------------------------
 
+To build the DativeTop.app MacOS artifact, run the following on a Mac::
+
+    $ briefcase build
+
+To clear out all existing OLDs and DativeTop state, use the following
+convenience make command::
+
+    $ make refresh-dativetop
+
+
+Potentially Deprecated MacOS Build Commands
+````````````````````````````````````````````````````````````````````````````````
+
 Previous ``beeware-build-mac-os`` command::
 
     DFLT_DATIVETOP_OLD_NAME=${DFLT_DATIVETOP_OLD_NAME} beeware build macOS

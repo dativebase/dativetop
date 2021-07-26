@@ -88,3 +88,5 @@ aol.txt
 .cpcache/
 
 src/dativetop.dist-info/
+include/
+tmp/

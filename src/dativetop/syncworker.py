@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import shlex
+import shutil
 import subprocess
 import threading
 import time
@@ -220,15 +221,27 @@ def unregister_old_with_dative(old):
 
 def create_local_old(old):
     os.chdir(c.OLD_DIR)
-    cmd = f'initialize_old configlocal.ini {old["slug"]}'
-    logger.debug(f'Running command {cmd} to create the {old["slug"]} OLD')
+    initialize_old_path = 'initialize_old'
+    if not shutil.which(initialize_old_path):
+        initialize_old_path = os.path.join(
+            os.path.dirname(c.HERE),
+            'app_packages',
+            'bin',
+            'initialize_old')
+    cmd = initialize_old_path + f' configlocal.ini {old["slug"]}'
+    logger.info(f'Running command `{cmd}` to create the {old["slug"]} OLD')
     cmd = shlex.split(cmd)
     child = subprocess.Popen(cmd,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
-    child.communicate()
+    stdout_data, stderr_data = child.communicate()
     if child.returncode != 0:
         logger.warning(f'Failed to create new local OLD {old["slug"]}')
+        try:
+            logger.warning(stdout_data)
+            logger.warning(stderr_data)
+        except Exception:
+            logger.warning('Failed to log stdout and stderr')
         return False
     logger.info(f'Successfully issued the command to create the new local OLD'
                 f' {old["slug"]}')
@@ -297,7 +310,7 @@ def process_command(dtserver, old_service, command):
     if not old_exists:
         old_exists = create_local_old(old)
         if not old_exists:
-            msg = f'Attempting to create the OLD {old["slug"]} locally'
+            msg = f'Failed to create the OLD {old["slug"]} locally'
             logger.warning(msg)
             raise SyncOLDError(msg)
 

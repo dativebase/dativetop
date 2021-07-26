@@ -11,18 +11,29 @@ author_email = "jrwdunham@gmail.com"
 formal_name = "DativeTop"
 description = "A desktop application for managing linguistic fieldwork data"
 icon = "src/dativetop/resources/dativetop"
-sources = ['src/dativetop']
-requires = []
+splash = "src/dativetop/resources/dativetop"
+sources = ['src/dativetop', 'src/old', 'src/dative']
+requires = [
+    # DativeTop Requirements
+    'oldclient==0.0.1',
+    'pyperclip==1.7.0',
 
+    # OLD Dependency from GitHub hash
+    # master branch:
+    # 'git+git://github.com/dativebase/old-pyramid@d538e8b8686296cbe798631a70a755b526fc0066#egg=old',
+    # build-with-briefcase-on-macos
+    'git+git://github.com/dativebase/old-pyramid@68967d9e26839776db94434f03771ff27794c144#egg=old',
+
+]
 
 [tool.briefcase.app.dativetop.macOS]
 requires = [
-    'toga-cocoa>=0.3.0.dev26',
+    'toga-cocoa>=0.3.0.dev27',
 ]
 
 [tool.briefcase.app.dativetop.linux]
 requires = [
-    'toga-gtk>=0.3.0.dev26',
+    'toga-gtk>=0.3.0.dev27',
 ]
 system_requires = [
     'libgirepository1.0-dev',
@@ -34,16 +45,16 @@ system_requires = [
 
 [tool.briefcase.app.dativetop.windows]
 requires = [
-    'toga-winforms>=0.3.0.dev26',
+    'toga-winforms>=0.3.0.dev27',
 ]
 
 # Mobile deployments
 [tool.briefcase.app.dativetop.iOS]
 requires = [
-    'toga-iOS>=0.3.0.dev26',
+    'toga-iOS>=0.3.0.dev27',
 ]
 
 [tool.briefcase.app.dativetop.android]
 requires = [
-    'toga-android>=0.3.0.dev26',
+    'toga-android>=0.3.0.dev27',
 ]

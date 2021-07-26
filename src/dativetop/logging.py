@@ -1,5 +1,10 @@
 import logging
 from logging.config import dictConfig
+import os
+
+
+from dativetop.constants import HERE
+
 
 logging_config = dict(
     version=1,
@@ -8,12 +13,20 @@ logging_config = dict(
               '%(asctime)s %(name)-32s %(levelname)-8s %(message)s'}
     },
     handlers={
-        'h': {'class': 'logging.StreamHandler',
-              'formatter': 'f',
-              'level': logging.INFO}
+        'stdout': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'f',
+            'level': logging.INFO
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(HERE, 'dativetop.log'),
+            'mode': 'a',
+            'formatter': 'f'
+        },
     },
     root={
-        'handlers': ['h'],
+        'handlers': ['file'],
         'level': logging.INFO,
     },
 )

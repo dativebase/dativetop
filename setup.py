@@ -67,36 +67,36 @@ setup(
         'macos': {
             'icon': 'src/dativetop/resources/dativetop',
             'app_requires': [
-                'toga-cocoa==0.3.0.dev26',
+                'toga-cocoa==0.3.0.dev27',
             ]
         },
         'linux': {
             'app_requires': [
-                'toga-gtk==0.3.0.dev26',
+                'toga-gtk==0.3.0.dev27',
             ]
         },
         'windows': {
             'app_requires': [
-                'toga-winforms==0.3.0.dev26',
+                'toga-winforms==0.3.0.dev27',
             ]
         },
 
         # Mobile deployments
         'ios': {
             'app_requires': [
-                'toga-ios==0.3.0.dev26',
+                'toga-ios==0.3.0.dev27',
             ]
         },
         'android': {
             'app_requires': [
-                'toga-android==0.3.0.dev26',
+                'toga-android==0.3.0.dev27',
             ]
         },
 
         # Web deployments
         'django': {
             'app_requires': [
-                'toga-django==0.3.0.dev26',
+                'toga-django==0.3.0.dev27',
             ]
         },
     }

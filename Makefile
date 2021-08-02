@@ -93,7 +93,7 @@ dashboard:  ## Open tmux panes prepped to pilot DativeTop and its services
 
 serve-dt-server:  ## Serve the DativeTop Server Pyramid process independently
 	cd ${HERE}/src/dativetop/server; \
-    ${HERE}/../venv3.6.5/bin/pserve --reload config.ini http_port=4676 http_host=127.0.0.1
+    pserve --reload config.ini http_port=4676 http_host=127.0.0.1
 
 destroy-olds:  ## Destroy all OLD instances. !!!DANGER!!!
 	@rm -f src/old/*.sqlite; \
@@ -101,9 +101,12 @@ destroy-olds:  ## Destroy all OLD instances. !!!DANGER!!!
 
 refresh-dtserver:  ## Destroy and recreate the DTServer database
 	@rm -f src/dativetop/server/dativetop.sqlite; \
-		${HERE}/../venv3.6.5/bin/initialize_dtserver_db src/dativetop/server/config.ini
+		initialize_dtserver_db src/dativetop/server/config.ini
 
 refresh-dativetop: destroy-olds refresh-dtserver  ## Clear the DTServer db and remove all OLDs !!!DANGER!!!
+
+build-macos:
+	@rm -rf macOS; briefcase build
 
 help:  ## Print this help message.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

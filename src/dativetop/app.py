@@ -57,9 +57,15 @@ def dativetop_on_exit(dativetop_app):
     """If we are exiting because of a fatal error, display an error dialog to
     notify the user of that fact.
     """
+    dativetop_app.syncmanager_comm['exit?'] = True
+    dativetop_app.syncworker_comm['exit?'] = True
+    dativetop_app.syncmanager.join()
+    dativetop_app.syncworker.join()
+    stop_services(dativetop_app.services)
     if dativetop_app.fatal_error:
         dativetop_app.main_window.error_dialog(
             'Error', dativetop_app.fatal_error)
+    return True
 
 
 def launch_dativetop(services):
@@ -105,6 +111,10 @@ class DativeTop(toga.App):
         self.dativetop_gui = None
         self.commands = None
         self.fatal_error = None
+        self.syncmanager = None
+        self.syncmanager_comm = None
+        self.syncworker = None
+        self.syncworker_comm = None
         super().__init__(*args, **kwargs)
 
     def startup(self):
@@ -122,8 +132,9 @@ class DativeTop(toga.App):
         self.main_window.content = self.dativetop_gui
         self.main_window.show()
         self.verify_services()
-        syncmanager.start_sync_manager(self.services.dtserver)
-        syncworker.start_sync_worker(
+        self.syncmanager, self.syncmanager_comm = syncmanager.start_sync_manager(
+            self.services.dtserver)
+        self.syncworker, self.syncworker_comm = syncworker.start_sync_worker(
             self.services.dtserver, self.services.old_service)
 
     def verify_services(self):
@@ -304,7 +315,6 @@ class DativeTop(toga.App):
         cleanly so that we can start them up again when DativeTop is launched
         anew.
         """
-        stop_services(self.services)
         self.exit()
 
     def set_commands(self):

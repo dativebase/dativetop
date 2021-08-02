@@ -2,18 +2,19 @@
   DativeTop: `DativeBase`_ as a Desktop Application
 ================================================================================
 
-
 `DativeBase`_ is *web-based* software for linguistic fieldwork. DativeTop is
 DativeBase as a *desktop* application. It is `Dative`_ and the `OLD`_ wrapped
 in a `Toga`_ and packaged into a `Briefcase`_.
 
-The ultimate goal is for DativeTop to be a desktop application with an icon
-that can be double-clicked and just starts up in the manner that is typical for
-the platform on which it is being run. DativeTop will save files to the user's
-filesystem and structured data to local SQLite files. DativeTop should have an
-interface that allows users to configure a local OLD as a subscriber to a
-specified OLD instance on the web. DativeTop will have logic for maintaining
-consistency with the server-side "leader" OLD.
+DativeTop is currently a work in progress. When complete, DativeTop will be a
+cross-platform (Windows and Mac OS) desktop application that allows users to
+have local copies of their Online Linguistic Databases (OLDs). The files of
+these OLDs will be saved to the local filesystem and their structured data will
+be saved to local SQLite files. DativeTop provides a graphical interface to
+allow users to create new local OLDs and configure them to be read-only replicas
+of remote "parent" OLDs. In phase 2, DativeTop will allow the local OLDs to be
+mutable and will support synchronization and conflict resolution between local
+and remote OLDs.
 
 
 Install
@@ -22,143 +23,180 @@ Install
 End users *should* be able to install DativeTop in a way that is familiar on
 their platform. For example, Mac OS users should be able to download a
 DativeTop.dmg package, double-click it, drag the DativeTop.app folder to their
-Applications folder, and double-click on DativeTop.app to start a running
-DativeTop that just works.
+Applications folder, and double-click DativeTop.app to start a running DativeTop
+that just works.
 
-But DativeTop is not there yet. In the meantime, if you are feeling
+However, DativeTop is not there yet. In the meantime, if you are feeling
 adventurous, you can try to install DativeTop's dependencies and either run it
 in development mode or build the native binaries yourself using the
 instructions in the sections that follow.
 
 
-Install from Source (for Developers)
+Install from Source
 ================================================================================
 
-QuickStart
---------------------------------------------------------------------------------
+The following instructions should install DativeTop on Unix-based systems, i.e.,
+Mac OS or Linux.
 
-For quick reference, here are the core development install commands. Use the
-detailed instructions below if this is your first time installing DativeTop
-from source::
-
-    $ python3 -m venv venv
-    $ source venv/bin/activate
-    $ git submodule update --init --recursive
-    $ make build-dative
-    $ make install
-    $ make create-old-instance OLD_NAME=myold
-    $ make launch
-
-To install all of the required dependencies manually::
-
-    $ pip install -r requirements.txt && \
-		$ pip install -r src/old/requirements/testsqlite.txt && \
-		$ pip install -e src/old/ && \
-		$ pip install -e src/dativetop/server/ && \
-		$ pip install requirements/wheels/dativetop_append_only_log_domain_model-0.0.1-py3-none-any.whl
-
-This command may be useful::
-
-	  $ initialize_old src/old/config.ini myold
-
-
-Detailed Source Install
---------------------------------------------------------------------------------
-
-Detailed MacOS Source Install
-````````````````````````````````````````````````````````````````````````````````
-
-The following instructions should install DativeTop on Mac OS.
-
-Activate a Python 3.6 virtual environment (creating it first with ``python -m
+Activate a Python 3 virtual environment (creating it first with ``python -m
 venv venv`` if needed)::
 
-    $ source ../venv3.6.5/bin/activate.fish
-    (venv) $
+    $ source venv/bin/activate
 
 Making sure you are in the directory containing this file, clone the Dative and
 OLD submodules using the following git command::
+
+    $ git submodule update --init --recursive
 
 Extract the pre-built Dative (JavaScript) source to ``src/dative/dist/``::
 
     $ rm -rf src/dative/dist/
     $ cd src/dative/releases/
-    $ tar -zxvf release-2c18bdf158fc8664404e67e5530b9a95a18d6d11.tar.gz
-    $ cp -r release-9e40102c7fa79618964df7ac9a0a370cc60ee9bd ./../dist
-    $ cd ../../..
+    $ tar -zxvf release-315b7d9a8e2106612639caf13189eb2de8586278.tar.gz
+    $ cp -r dist ./../
+    $ cd ../..
 
-Install DativeTop's (the Toga/Briefcase app's) Python dependencies::
+Install DativeTop's (i.e., the Toga/Briefcase app's) Python dependencies::
 
-    (venv3.6.5)$ pip install -r requirements.txt
-
-.. warning:: At present (2021-01-31), Toga's WebView does not accept keyboard
-   input. To resolve this, you must manually modify
-   venv3.6.5/lib/python3.6/site-packages/toga_cocoa/widgets/webview.py by adding
-   the following import and modifying the referenced method as shown below::
-
-       from rubicon.objc import objc_method, py_from_ns, send_super
-       @objc_method
-       def keyDown_(self, event) -> None:
-           if self.interface.on_key_down:
-               self.interface.on_key_down(self.interface, **toga_key(event))
-           send_super(__class__, self, 'keyDown:', event)
+    $ pip install -r requirements.txt
 
 Install the OLD's requirements and the OLD itself in development mode::
 
-    (venv3.6.5)$ pip install -r src/old/requirements/testsqlite.txt
-    (venv3.6.5)$ pip install -e src/old/
+    $ pip install -r src/old/requirements/testsqlite.txt
+    $ pip install -e src/old/
 
-Install the DativeTop Server's Python dependencies::
+Install DativeTop Server's Python dependencies::
 
-    (venv3.6.5)$ pip install -e src/dativetop/server/
-		(venv3.6.5)$ pip install requirements/wheels/dativetop_append_only_log_domain_model-0.0.1-py3-none-any.whl
+    $ pip install -e src/dativetop/server/
 
-Create the filesystem structure and (SQLite) database for a local OLD named
-"myold"::
+Create a fresh SQLite db for DativeTop Server::
 
-    (venv3.6.5)$ make create-old-instance OLD_NAME=myold
+    $ make refresh-dtserver
 
-The above command will create the OLD's SQLite file and its filesystem
-structure under ``./oldinstances/``:
+Build the DativeTop GUI. If successful, the DTGUI re-frame (ClojureScript) app
+will be built under src/dativetop/gui/target/.::
 
-- SQLite database file: ``oldinstances/dbs/myold.sqlite``
-- OLD directory for saving, e.g., audio, files: ``oldinstances/myold/``
+    $ cd src/dativetop/gui
+    $ npm install -g shadow-cljs
+    $ yarn
+    $ make build
+    $ cd ../../..
 
-The SQLite db can be accessed as follows::
-
-    (venv)$ sqlite3 oldinstances/dbs/myold.sqlite
-
-The ``create-old-instance`` command above tells Dative about the new OLD by
-adding an object to the array defined in::
-
-    src/dative/dist/servers.json
-
-The ``create-old-instance`` command also tells Dative that there is an OLD
-instance being served, in this case, at http://127.0.0.1:5679/myold/.
-
-You should now be able to launch DativeTop with the following command::
+At this point, if all of the above was successful, you should be able to start
+DativeTop in development mode with the following::
 
     $ briefcase dev
 
-TODO: return here. The DativeTop launched via the above is not yet at basic
-functionality.
+For details on how to use DativeTop, see the :ref:`Using DativeTop` section.
 
-The above command should open DativeTop in a native window for your platform.
-That window will display a WebView wherein Dative should be running. You should
-be able to login to the OLD named ``myold`` from the Dative interface using
-username *admin* and password *adminA_1*. Note that Dative and the OLD will be
-being served locally so you can view them in a regular browser at the following
-URLs:
 
-- Dative: http://127.0.0.1:5678/
-- The *myold* OLD instance: http://127.0.0.1:5679/myold/
+Install on Windows
+--------------------------------------------------------------------------------
+
+Installation on Windows is similar to that on Mac (Unix). First, install Git and
+Python 3.6 using the pre-built installers available on GitHub. Then open
+PowerShell and run the following commands.
+
+WARNING: these instructions are currently incomplete.
+
+Create a dev directory if you do not have one already::
+
+    > cd ~
+    > mkdir Development
+    > cd Development
+
+Clone the DativeTop source code, check out the current dev branch, and clone the submodules::
+
+    > git clone https://github.com/dativebase/dativetop.git
+    > cd dativetop
+    > git submodule update --init --recursive
+
+Make note of the location of Python and Pip. In my case, given the default
+install using the Python .exe installer, they were at::
+
+    > C:\Users\username\AppData\Local\Programs\Python\Python36\python.exe
+    > C:\Users\username\AppData\Local\Programs\Python\Python36\Scripts\pip.exe
+
+Create the virtual environment using ``venv``::
+
+    > C:\Users\username\AppData\Local\Programs\Python\Python36\python.exe -m venv C:\Users\username\Development\venv
+
+Activate the venv::
+
+    > cd ~\Development
+    > .\venv\Scripts\Activate.ps1
+
+Extract the pre-built Dative and move it to ``src/dative/dist/``::
+
+    > cd dativetop\src\dative\releases
+    > tar -zxvf release-315b7d9a8e2106612639caf13189eb2de8586278.tar.gz
+    > mv dist ..\dist
+    > cd ~\Development\dativetop
+
+Install DativeTop's Python dependencies::
+
+    > pip3 install -r requirements.txt
+    > pip3 install -r src/old/requirements/testsqlite.txt
+		> pip3 install -e src/old/
+		> pip3 install -e src/dativetop/server/
+
+TODO: continue these instructions.
+
+
+Build a Release
+================================================================================
+
+Using Briefcase_, it should be possible to build a production release of
+DativeTop locally. Building DativeTop means constructing native application
+packages for a particular target platform, e.g., Mac OS X or Windows.
+
+The catch is that you must be on the platform for which you are building. That
+is, you can only build a MacOS release on a Mac and a Windows release on Windows.
+
+
+Build on Mac OS
+--------------------------------------------------------------------------------
+
+To build a production release of DativeTop on MacOS run::
+
+    $ make build-macos
+
+If successful, your ``.app`` application directory will be at
+``macOS/DativeTop/DativeTop.app``. Mac treats these directories as applications.
+You should be able to double-click this file in order to run DativeTop.
+
+To clear out all existing OLDs and DativeTop state, use the following
+convenience make command::
+
+    $ make refresh-dativetop
+
+The above is useful if you are building DativeTop repeatedly during a debugging,
+testing, and/or development scenario.
+
+
+Build on Windows
+--------------------------------------------------------------------------------
+
+TODO.
 
 
 Troubleshooting
+================================================================================
+
+Logs
 --------------------------------------------------------------------------------
 
+The logs for DativeTop running in dev mode can be found at::
+
+    src/dativetop.log
+
+The logs of a built DativeTop app can be found (on a Mac) at::
+
+    DativeTop.app/Contents/Resources/app/dativetop.log
+
+
 Blank Screen
-````````````````````````````````````````````````````````````````````````````````
+--------------------------------------------------------------------------------
 
 If you launch DativeTop and see a blank screen, it may be that a previous
 DativeTop was not shut down correctly. Search for the offending process and
@@ -171,7 +209,7 @@ kill it::
 
 
 Pillow (OLD dep) Won't Install
-````````````````````````````````````````````````````````````````````````````````
+--------------------------------------------------------------------------------
 
 If you run into trouble installing Pillow (an OLD dependency for image
 processing), then you might need to install libjpeg and zlib. See:
@@ -186,85 +224,26 @@ installing the macOS SDK headers (YMMV)::
     $ sudo installer -pkg /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
 
 
-Developer Hints
+Viewing Console Output from a Build
 --------------------------------------------------------------------------------
+
+Sometimes a built DativeTop is failing mysteriously and inspecting the logs is
+insufficient. If you double-click on ``DativeTop.app`` and the application does
+not work as expected, you can launch DativeTop manually such that any exceptions
+that are raised by the underlying Python code are visible in the terminal::
+
+    $ macOS/DativeTop.app/Contents/MacOS/DativeTop
+
+
+Developer Conveniences
+================================================================================
 
 To view the convenience ``make`` commands that are available::
 
     $ make help
 
-In a typical development workflow, you will want to build Dative, create an OLD
-instance, and then launch DativeTop using the following commands::
-
-    $ make build-dative
-    $ make create-old-instance OLD_NAME=myold
-    $ make launch
-
-Note: the ``create-old-instance`` command will create a SQLite database file in
-``oldinstances/dbs/`` as well as a directory for your OLD instance's files in
-``oldinstances/``. The corresponding "undo" command, which destroys an OLD
-instance's database and directory structure, is ``destroy-old-instance``.
-
-
-Build
-================================================================================
-
-Building DativeTop means constructing native application packages for a
-particular target platform, e.g., Mac OS X or Windows.
-
-
-Build for Mac OS X
---------------------------------------------------------------------------------
-
-To build the DativeTop.app MacOS artifact, run the following on a Mac::
-
-    $ briefcase build
-
-To clear out all existing OLDs and DativeTop state, use the following
-convenience make command::
-
-    $ make refresh-dativetop
-
-
-Potentially Deprecated MacOS Build Commands
-````````````````````````````````````````````````````````````````````````````````
-
-Previous ``beeware-build-mac-os`` command::
-
-    DFLT_DATIVETOP_OLD_NAME=${DFLT_DATIVETOP_OLD_NAME} beeware build macOS
-
-New ``beeware-build-mac-os`` command::
-
-    DFLT_DATIVETOP_OLD_NAME=${DFLT_DATIVETOP_OLD_NAME} python setup.py macos -s
-
-Run the following command::
-
-    (venv) $ make build-mac-os
-
-If the above succeeds, you should have a directory named DativeTop.app under
-macOS/. Double-clicking this should open DativeTop, which will display Dative.
-You should be able to login to the default *myold* OLD instance with username
-*admin* and password *adminA_1*.
-
-To build a mountable disk image containing DativeTop.app (i.e., a DMG file)::
-
-    (venv) $ make release-mac-os
-
-
-Troubleshooting
-````````````````````````````````````````````````````````````````````````````````
-
-If you double-click on DativeTop.app and the application does not work as
-expected, you can launch DativeTop manually such that any exceptions that are
-raised by the underlying Python code are viewable in the terminal::
-
-    (venv) $ macOS/DativeTop.app/Contents/MacOS/DativeTop
-
-
-Build for Linux and Windows
---------------------------------------------------------------------------------
-
-TODO.
+Note that some of these make commands are no longer applicable and should be
+deprecated.
 
 
 Known issues
@@ -274,16 +253,23 @@ File upload does not work on Mac OS X
 --------------------------------------------------------------------------------
 
 When you click the "Choose file" button in the "New File" interface, the file
-browse menu does not open up.  This is a known issue with Toga related to the
+browse menu does not open up. This is a known issue with Toga related to the
 Cocoa WebView widget. See the `DativeTop cannot upload files`_ issue on GitHub.
 
 The workaround at present is to open DativeTop's local Dative in a browser and
 do your file upload from there. DativeTop makes this easy: click on the "Help"
 menu and then click "Visit Dative in Browser".
 
+Note that this issue is really a non-issue in the context of read-only local
+OLDs since files cannot be uploaded in such OLDs anyway because they are
+read-only. It will become a more significant issue when the read-only
+restriction is removed at a later iteration.
+
 
 Architecture
 ================================================================================
+
+This section describes each of the components of DativeTop.
 
 - DativeTop Toga App:
 
@@ -291,83 +277,89 @@ Architecture
   - starts and serves local servers for 4 other components: Dative GUI, OLD
     Service, DativeTop Service, DativeTop GUI.
 
-- Dative GUI: interface to multiple OLD instances
-
+- Dative GUI (a.k.a., Dative App): interface to multiple OLD instances
 - OLD Service: serves OLD instances at local URLs
-
 - DativeTop GUI: interface to DativeTop Service
+- DativeTop Service: the source of truth on the local OLD instances, the Dative
+  App, the OLD Service, and the queue of sync-OLD! commands.
+- SyncManager: thread that ensures each auto-syncing OLD has a sync-OLD! command
+  when it needs one.
+- SyncWorker: thread that performs the auto-syncing of OLDs.
 
-- DativeTop Service: manages local OLD instances, syncs them to external
-  leaders, ...
 
-
-Notes and Possible Issues
+Using DativeTop
 ================================================================================
 
-Warning seemingly from Mac OS:
+When the DativeTop app is running, it should open a platform-native window
+displaying the DativeTop GUI. This is where you view your local OLD instances
+and create new ones.
 
-    2020-07-30 11:14:23.303 python[45386:5039192] *** WARNING: Method convertPointToBase: in class NSView is deprecated on 10.7 and later. It should not be used in new applications.
+To view your local OLDs via the Dative GUI, click View > Dative in DativeTop's
+top-level menubar, or use the cmd/ctrl-D shortcut. In order to access the
+local OLD, you first have to tell Dative that it exists. From within Dative,
+first click on Dative > Application Settings, then click on the Servers button,
+and then click the "+" ("create a new server") button. The "Name" of the OLD can
+be anything but a good choice is same name as that specified in the DativeTop
+GUI when the OLD was created. The "URL" of the OLD must be the URL of the local
+OLD server (likely http://127.0.0.1:5679), followed by a forward slash and then
+the slug of the OLD, e.g., http://127.0.0.1:5679/aa1.
 
+Once you have created the OLD server within Dative, you will be able to login to
+the OLD from Dative as usual. Each instance you create will have the same
+username and password:
 
-Build on Windows
-================================================================================
+- username: ``admin``
+- password: ``adminA_1``
 
-Strategy 1: Use an Azure Windows Server 2019 Free Instance (2020-10)
---------------------------------------------------------------------------------
+If you want to auto-sync this OLD with an external OLD, you must enable auto-sync
+and also specify the URL, username and password of its remote parent OLD.
 
-First, install Git and Python 3.6 using the pre-built installers available on
-GitHub. Then open PowerShell and run the following commands.
+- auto-sync?: Click the auto-sync? checkbox to enable automated
+  synchronization between this local OLD and its remote (parent) OLD.
+- remote OLD URL: Specify the URL of the remote OLD. For example, use
+  https://do.onlinelinguisticdatabase.org/blaold to specify the Blackfoot OLD.
 
-Create a dev directory if you do not have one already::
+  - During development/testing, this may be a local OLD that is being served by a
+    separate process, e.g., via the DativeBase docker-compose local deployment
+    strategy.
+  - Note that the remote OLD must be running a version that supports the
+    ``/sync`` endpoint.
 
-    > cd ~
-    > mkdir Development
-    > cd Development
+- remote OLD username/password: Your credentials that allow you to login to the
+  remote OLD.
 
-Clone the DativeTop source code, check out the current dev branch, and clone the submodules::
+DativeTop uses DativeTop Server to manage its state in a SQLite database.
+If you need to debug the operation of Dativetop, it may be helpful to know that
+its database file and its log file can be found at:
 
-    > git clone https://github.com/dativebase/dativetop.git
-    > cd dativetop
-    > git fetch origin -a
-    > git checkout -b dev/build-on-windows origin/dev/build-on-windows
-    > git submodule update --init --recursive
+- db file: ``src/dativetop/server/dativetop.sqlite``
+- log file: ``src/dativetop.log``
 
-Make note of the location of Python and Pip. In my case, given the default
-install using the Python .exe installer, they were at::
+Your local OLD instances are all read-only. This means that Dative will allow
+you to *try* to update, create and delete entities (e.g., forms), but the
+underlying OLD instance will prohibit such actions.
 
-    > C:\Users\jrwdunham\AppData\Local\Programs\Python\Python36\python.exe
-    > C:\Users\jrwdunham\AppData\Local\Programs\Python\Python36\Scripts\pip.exe
+Each local OLD instance has its own SQLite database and filesystem directory.
+The names of both of these will be determined by the "slug" of the OLD that you
+have specified. For example, if the slug is ``aa1``, then the OLD's database
+file and filesystem directory will be found at:
 
-Create the virtual environment using ``venv``::
+- OLD db file: ``src/old/aa1.sqlite``
+- OLD directory: ``src/old/store/aa1/``
 
-    > C:\Users\jrwdunham\AppData\Local\Programs\Python\Python36\python.exe -m venv C:\Users\jrwdunham\Development\venv
+When DativeTop is running, both Dative and the OLD will be served locally.
+This means that you can access them from a regular web browser (e.g., Chrome,
+Firefox, etc.) at the following URLs:
 
-Activate the venv::
+- Dative: http://127.0.0.1:5678/
+- The *aa1* OLD instance: http://127.0.0.1:5679/aa1/
 
-    > cd ~\Development
-    > .\venv\Scripts\Activate.ps1
-    (venv)>
+When you are running a DativeTop instance that has been built for Mac OS, all of
+the paths described above are still valid, except you must replace the ``src``
+with ``macOS/DativeTop/DativeTop.app/Contents/Resources/app``. For example, the
+DativeTop SQLite database file will be at
+``macOS/DativeTop/DativeTop.app/Contents/Resources/app/dativetop/server/dativetop.sqlite``.
 
-Extract the pre-build Dative and move it to ``src/dative/dist/``::
-
-    (venv)> cd dativetop\src\dative\releases
-    (venv)> tar -xvzf release-2c18bdf158fc8664404e67e5530b9a95a18d6d11.tar.gz
-    (venv)> mv release-2c18bdf158fc8664404e67e5530b9a95a18d6d11 ..\dist
-    (venv)> cd ~\Development\dativetop
-
-Install DativeTop's Python dependencies::
-
-    (venv)> pip3 install -r requirements.txt
-    (venv)> pip3 install -r src/old/requirements/testsqlite.txt
-		(venv)> pip3 install -e src/old/
-		(venv)> pip3 install -e src/dativetop/server/
-		(venv)> pip3 install requirements/wheels/dativetop_append_only_log_domain_model-0.0.1-py3-none-any.whl
-
-Initialize an OLD named ``testold``::
-
-    (venv)> initialize_old src\old\configlocal.ini myold
-
-Launch DativeTop::
 
 .. _`DativeTop cannot upload files`: https://github.com/dativebase/dativebase/issues/16
 .. _`DativeBase`: https://github.com/dativebase/dativebase

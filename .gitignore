@@ -90,3 +90,5 @@ aol.txt
 src/dativetop.dist-info/
 include/
 tmp/
+src/dativetop.log
+src/dativetop/server/dativetop.sqlite

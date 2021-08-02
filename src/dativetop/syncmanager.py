@@ -50,7 +50,7 @@ def get_olds(dtserver):
         return []
 
 
-def sync_manager(dtserver):
+def sync_manager(dtserver, comm):
     while True:
         try:
             commands = get_open_sync_old_commands(dtserver)
@@ -77,12 +77,16 @@ def sync_manager(dtserver):
             logger.exception('SyncManager failed when attempting to create new'
                              ' sync-OLD! commands')
         finally:
+            if comm.get('exit?'):
+                break
             time.sleep(2)
 
 
 def start_sync_manager(dtserver):
+    comm = {}
     thread = threading.Thread(
         target=sync_manager,
-        kwargs={'dtserver': dtserver},
+        kwargs={'dtserver': dtserver, 'comm': comm},
         daemon=True)
     thread.start()
+    return thread, comm

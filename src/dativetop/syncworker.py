@@ -383,7 +383,7 @@ def process_command(dtserver, old_service, command):
                                 table.c.id == row_id).values(**updated_row))
 
 
-def sync_worker(dtserver, old_service):
+def sync_worker(dtserver, old_service, comm):
     while True:
         try:
             # Pop and then process the next sync-OLD! command
@@ -401,13 +401,18 @@ def sync_worker(dtserver, old_service):
             # Tell DTServer that we have finished processing the command.
             if command:
                 complete_sync_old_command(dtserver, command)
+            if comm.get('exit?'):
+                break
             time.sleep(5)
 
 
 def start_sync_worker(dtserver, old_service):
+    comm = {}
     thread = threading.Thread(
         target=sync_worker,
         kwargs={'dtserver': dtserver,
-                'old_service': old_service},
+                'old_service': old_service,
+                'comm': comm,},
         daemon=True)
     thread.start()
+    return thread, comm

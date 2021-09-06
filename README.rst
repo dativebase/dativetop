@@ -20,8 +20,8 @@ and remote OLDs.
 Install
 ================================================================================
 
-End users *should* be able to install DativeTop in a way that is familiar on
-their platform. For example, Mac OS users should be able to download a
+End users will ultimately be able to install DativeTop in a way that is familiar
+on their platform. For example, Mac OS users will be able to download a
 DativeTop.dmg package, double-click it, drag the DativeTop.app folder to their
 Applications folder, and double-click DativeTop.app to start a running DativeTop
 that just works.
@@ -97,7 +97,7 @@ Installation on Windows is similar to that on Mac (Unix). First, install Git and
 Python 3.6 using the pre-built installers available on GitHub. Then open
 PowerShell and run the following commands.
 
-WARNING: these instructions are currently incomplete.
+**WARNING: these instructions are currently incomplete.**
 
 Create a dev directory if you do not have one already::
 
@@ -161,9 +161,23 @@ To build a production release of DativeTop on MacOS run::
 
     $ make build-macos
 
+The core of the above command is a call to ``briefcase build``. The make command
+does a little more work by pruning out some unnecessary files and directories
+that are not needed in the DativeTop app.
+
 If successful, your ``.app`` application directory will be at
 ``macOS/DativeTop/DativeTop.app``. Mac treats these directories as applications.
 You should be able to double-click this file in order to run DativeTop.
+
+Once the build has been created under ``macOS/``, you may build a release (.dmg)
+file with::
+
+    $ briefcase package --no-sign
+
+If successful, the above will create the versioned .dmg file under the
+``macOS/`` directory. You can double-click this file and Finder will display a
+volume containing DativeTop where you can drag DativeTop to you Applications
+folder to install it, just like any other app.
 
 To clear out all existing OLDs and DativeTop state, use the following
 convenience make command::
@@ -320,8 +334,8 @@ and also specify the URL, username and password of its remote parent OLD.
   https://do.onlinelinguisticdatabase.org/blaold to specify the Blackfoot OLD.
 
   - During development/testing, this may be a local OLD that is being served by a
-    separate process, e.g., via the DativeBase docker-compose local deployment
-    strategy.
+    separate process, e.g., via the `DativeBase docker-compose local deployment
+    strategy`_.
   - Note that the remote OLD must be running a version that supports the
     ``/sync`` endpoint.
 
@@ -361,10 +375,11 @@ DativeTop SQLite database file will be at
 ``macOS/DativeTop/DativeTop.app/Contents/Resources/app/dativetop/server/dativetop.sqlite``.
 
 
-.. _`DativeTop cannot upload files`: https://github.com/dativebase/dativebase/issues/16
-.. _`DativeBase`: https://github.com/dativebase/dativebase
-.. _`Dative`: https://github.com/dativebase/dative
-.. _`OLD`: https://github.com/dativebase/old-pyramid
 .. _`BeeWare`: https://github.com/pybee/beeware
-.. _`Toga`: https://github.com/pybee/toga
 .. _`Briefcase`: https://github.com/pybee/briefcase
+.. _`Dative`: https://github.com/dativebase/dative
+.. _`DativeBase`: https://github.com/dativebase/dativebase
+.. _`DativeBase docker-compose local deployment strategy`: https://github.com/dativebase/dativebase/tree/master/docker-compose
+.. _`DativeTop cannot upload files`: https://github.com/dativebase/dativebase/issues/16
+.. _`OLD`: https://github.com/dativebase/old-pyramid
+.. _`Toga`: https://github.com/pybee/toga

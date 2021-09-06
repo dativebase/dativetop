@@ -105,8 +105,23 @@ refresh-dtserver:  ## Destroy and recreate the DTServer database
 
 refresh-dativetop: destroy-olds refresh-dtserver  ## Clear the DTServer db and remove all OLDs !!!DANGER!!!
 
-build-macos:
-	@rm -rf macOS; briefcase build
+build-macos:  ## Build for Mac OS (removing unneeded cruft)
+	@rm -Rf macOS; \
+		rm -Rf tmp; \
+		briefcase build; \
+		mkdir -p tmp/dative; \
+		mv macOS/DativeTop/DativeTop.app/Contents/Resources/app/dative/* tmp/dative/; \
+		mv tmp/dative/dist macOS/DativeTop/DativeTop.app/Contents/Resources/app/dative/; \
+		mkdir -p tmp/dativetop/gui; \
+		mv macOS/DativeTop/DativeTop.app/Contents/Resources/app/dativetop/gui/* tmp/dativetop/gui/; \
+		mv tmp/dativetop/gui/target macOS/DativeTop/DativeTop.app/Contents/Resources/app/dativetop/gui/; \
+		mkdir -p tmp/old; \
+		mv macOS/DativeTop/DativeTop.app/Contents/Resources/app/old/* tmp/old/; \
+		mkdir -p macOS/DativeTop/DativeTop.app/Contents/Resources/app/old/old/static/; \
+		mv tmp/old/configlocal.ini macOS/DativeTop/DativeTop.app/Contents/Resources/app/old/; \
+		mv tmp/old/store macOS/DativeTop/DativeTop.app/Contents/Resources/app/old/; \
+		mv tmp/old/old/static/iso_639_3_languages_data macOS/DativeTop/DativeTop.app/Contents/Resources/app/old/old/static/; \
+		rm -r macOS/DativeTop/DativeTop.app/Contents/Resources/app_packages/old/tests
 
 help:  ## Print this help message.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

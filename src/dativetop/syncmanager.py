@@ -53,6 +53,7 @@ def get_olds(dtserver):
 def sync_manager(dtserver, comm):
     while True:
         try:
+            logger.info('Looking for sync-OLD! commands')
             commands = get_open_sync_old_commands(dtserver)
             olds = get_olds(dtserver)
             command_old_ids = [soc['old_id'] for soc in commands]
@@ -83,6 +84,7 @@ def sync_manager(dtserver, comm):
 
 
 def start_sync_manager(dtserver):
+    logger.info('Starting the SyncManager')
     comm = {}
     thread = threading.Thread(
         target=sync_manager,
